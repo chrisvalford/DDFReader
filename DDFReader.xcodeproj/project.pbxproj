@@ -13,6 +13,17 @@
 		2F9BFB812637F3FD0000CB91 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F9BFB802637F3FD0000CB91 /* Preview Assets.xcassets */; };
 		2F9BFB8C2637F3FD0000CB91 /* DDFReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFB8B2637F3FD0000CB91 /* DDFReaderTests.swift */; };
 		2F9BFB972637F3FD0000CB91 /* DDFReaderUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFB962637F3FD0000CB91 /* DDFReaderUITests.swift */; };
+		2F9BFBA62637F4270000CB91 /* DDFDataType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBA52637F4270000CB91 /* DDFDataType.swift */; };
+		2F9BFBA82637F4EE0000CB91 /* DDFConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBA72637F4EE0000CB91 /* DDFConstants.swift */; };
+		2F9BFBAA2637F5540000CB91 /* DDFField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBA92637F5540000CB91 /* DDFField.swift */; };
+		2F9BFBAC2637F5940000CB91 /* DDFFieldDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBAB2637F5940000CB91 /* DDFFieldDefinition.swift */; };
+		2F9BFBAE2637F5B70000CB91 /* DDFModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBAD2637F5B70000CB91 /* DDFModule.swift */; };
+		2F9BFBB02637F5DD0000CB91 /* DDFRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBAF2637F5DD0000CB91 /* DDFRecord.swift */; };
+		2F9BFBB22637F6200000CB91 /* DDFSubfield.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB12637F6200000CB91 /* DDFSubfield.swift */; };
+		2F9BFBB42637F63C0000CB91 /* DDFSubfieldDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB32637F63C0000CB91 /* DDFSubfieldDefinition.swift */; };
+		2F9BFBB62637F65F0000CB91 /* DDFUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB52637F65F0000CB91 /* DDFUtils.swift */; };
+		2F9BFBB82637F9B10000CB91 /* List.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB72637F9B10000CB91 /* List.swift */; };
+		2F9BFBBA26381D1D0000CB91 /* String+.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB926381D1D0000CB91 /* String+.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +56,17 @@
 		2F9BFB922637F3FD0000CB91 /* DDFReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DDFReaderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F9BFB962637F3FD0000CB91 /* DDFReaderUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFReaderUITests.swift; sourceTree = "<group>"; };
 		2F9BFB982637F3FD0000CB91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2F9BFBA52637F4270000CB91 /* DDFDataType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFDataType.swift; sourceTree = "<group>"; };
+		2F9BFBA72637F4EE0000CB91 /* DDFConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFConstants.swift; sourceTree = "<group>"; };
+		2F9BFBA92637F5540000CB91 /* DDFField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFField.swift; sourceTree = "<group>"; };
+		2F9BFBAB2637F5940000CB91 /* DDFFieldDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFFieldDefinition.swift; sourceTree = "<group>"; };
+		2F9BFBAD2637F5B70000CB91 /* DDFModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFModule.swift; sourceTree = "<group>"; };
+		2F9BFBAF2637F5DD0000CB91 /* DDFRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFRecord.swift; sourceTree = "<group>"; };
+		2F9BFBB12637F6200000CB91 /* DDFSubfield.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFSubfield.swift; sourceTree = "<group>"; };
+		2F9BFBB32637F63C0000CB91 /* DDFSubfieldDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFSubfieldDefinition.swift; sourceTree = "<group>"; };
+		2F9BFBB52637F65F0000CB91 /* DDFUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFUtils.swift; sourceTree = "<group>"; };
+		2F9BFBB72637F9B10000CB91 /* List.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = List.swift; sourceTree = "<group>"; };
+		2F9BFBB926381D1D0000CB91 /* String+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +117,7 @@
 		2F9BFB782637F3FC0000CB91 /* DDFReader */ = {
 			isa = PBXGroup;
 			children = (
+				2F9BFBA42637F40E0000CB91 /* DDFLibrary */,
 				2F9BFB792637F3FC0000CB91 /* DDFReaderApp.swift */,
 				2F9BFB7B2637F3FC0000CB91 /* ContentView.swift */,
 				2F9BFB7D2637F3FD0000CB91 /* Assets.xcassets */,
@@ -128,6 +151,24 @@
 				2F9BFB982637F3FD0000CB91 /* Info.plist */,
 			);
 			path = DDFReaderUITests;
+			sourceTree = "<group>";
+		};
+		2F9BFBA42637F40E0000CB91 /* DDFLibrary */ = {
+			isa = PBXGroup;
+			children = (
+				2F9BFBA52637F4270000CB91 /* DDFDataType.swift */,
+				2F9BFBA72637F4EE0000CB91 /* DDFConstants.swift */,
+				2F9BFBA92637F5540000CB91 /* DDFField.swift */,
+				2F9BFBAB2637F5940000CB91 /* DDFFieldDefinition.swift */,
+				2F9BFBAD2637F5B70000CB91 /* DDFModule.swift */,
+				2F9BFBAF2637F5DD0000CB91 /* DDFRecord.swift */,
+				2F9BFBB12637F6200000CB91 /* DDFSubfield.swift */,
+				2F9BFBB32637F63C0000CB91 /* DDFSubfieldDefinition.swift */,
+				2F9BFBB52637F65F0000CB91 /* DDFUtils.swift */,
+				2F9BFBB72637F9B10000CB91 /* List.swift */,
+				2F9BFBB926381D1D0000CB91 /* String+.swift */,
+			);
+			path = DDFLibrary;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -259,8 +300,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F9BFBAC2637F5940000CB91 /* DDFFieldDefinition.swift in Sources */,
+				2F9BFBB42637F63C0000CB91 /* DDFSubfieldDefinition.swift in Sources */,
+				2F9BFBA82637F4EE0000CB91 /* DDFConstants.swift in Sources */,
 				2F9BFB7C2637F3FC0000CB91 /* ContentView.swift in Sources */,
+				2F9BFBA62637F4270000CB91 /* DDFDataType.swift in Sources */,
+				2F9BFBB82637F9B10000CB91 /* List.swift in Sources */,
+				2F9BFBAE2637F5B70000CB91 /* DDFModule.swift in Sources */,
 				2F9BFB7A2637F3FC0000CB91 /* DDFReaderApp.swift in Sources */,
+				2F9BFBAA2637F5540000CB91 /* DDFField.swift in Sources */,
+				2F9BFBB22637F6200000CB91 /* DDFSubfield.swift in Sources */,
+				2F9BFBBA26381D1D0000CB91 /* String+.swift in Sources */,
+				2F9BFBB02637F5DD0000CB91 /* DDFRecord.swift in Sources */,
+				2F9BFBB62637F65F0000CB91 /* DDFUtils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
