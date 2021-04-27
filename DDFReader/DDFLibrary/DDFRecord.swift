@@ -107,7 +107,7 @@ public class DDFRecord {
          */
         /* -------------------------------------------------------------------- */
         if (!nReuseHeader) {
-            Debug.message("iso8211", "DDFRecord reusing header, calling readHeader()")
+            print("iso8211", "DDFRecord reusing header, calling readHeader()")
             return readHeader();
         }
 
@@ -127,7 +127,7 @@ public class DDFRecord {
         if nReadBytes != (nDataSize - nFieldOffset) && nReadBytes == -1 {
             return false
         } else if nReadBytes != (nDataSize - nFieldOffset) {
-            Debug.error("DDFRecord: Data record is short on DDF file.");
+            print("DDFRecord: Data record is short on DDF file.");
             return false
         }
         // notdef: eventually we may have to do something at this
@@ -173,7 +173,7 @@ public class DDFRecord {
         if nReadBytes == -1 {
             return false
         } else if nReadBytes != DDF_LEADER_SIZE {
-            Debug.error("DDFRecord.readHeader(): Leader is short on DDF file.");
+            print("DDFRecord.readHeader(): Leader is short on DDF file.");
             return false
         }
 
@@ -198,17 +198,17 @@ public class DDFRecord {
             // information,
             // with "^^^^^^^" being in the file. This is filler.
             if (Debug.debugging("iso8211")) {
-                Debug.output("Finished reading headers");
+                print("Finished reading headers");
             }
-            if (Debug.debugging("iso8211detail")) {
-                Debug.error("DDFRecord.readHeader(): " + nfe.getMessage());
+            //if (Debug.debugging("iso8211detail")) {
+                print("DDFRecord.readHeader(): " + nfe.getMessage());
                 nfe.printStackTrace();
-            } else {
-                //                 Debug.output("Data record appears to be corrupt on
-                // DDF file.\n -- ensure that the files were
-                // uncompressed without modifying\n carriage
-                // return/linefeeds (by default WINZIP does this).");
-            }
+//            } else {
+//                //                 print("Data record appears to be corrupt on
+//                // DDF file.\n -- ensure that the files were
+//                // uncompressed without modifying\n carriage
+//                // return/linefeeds (by default WINZIP does this).");
+//            }
 
             return false;
         }
@@ -225,12 +225,12 @@ public class DDFRecord {
         nFieldOffset = _fieldAreaStart - DDF_LEADER_SIZE;
 
         if (Debug.debugging("iso8211")) {
-            Debug.output("\trecord length [0,5] = " + _recLength);
-            Debug.output("\tfield area start [12,5]= " + _fieldAreaStart);
-            Debug.output("\tleader id [6] = " + _leaderIden + ", reuse header = " + nReuseHeader);
-            Debug.output("\tfield length [20] = " + _sizeFieldLength);
-            Debug.output("\tfield position [21] = " + _sizeFieldPos);
-            Debug.output("\tfield tag [23] = " + _sizeFieldTag);
+            print("\trecord length [0,5] = " + _recLength);
+            print("\tfield area start [12,5]= " + _fieldAreaStart);
+            print("\tleader id [6] = " + _leaderIden + ", reuse header = " + nReuseHeader);
+            print("\tfield length [20] = " + _sizeFieldLength);
+            print("\tfield position [21] = " + _sizeFieldPos);
+            print("\tfield tag [23] = " + _sizeFieldTag);
         }
 
         var readSubfields = false
@@ -247,7 +247,7 @@ public class DDFRecord {
 
             nDataSize = _fieldAreaStart - DDF_LEADER_SIZE;
         } else if _recLength < 24 || _recLength > 100000000 || _fieldAreaStart < 24 || _fieldAreaStart > 100000 {
-            Debug.error("DDFRecord: Data record appears to be corrupt on DDF file.\n -- ensure that the files were uncompressed without modifying\n carriage return/linefeeds (by default WINZIP does this).");
+            print("DDFRecord: Data record appears to be corrupt on DDF file.\n -- ensure that the files were uncompressed without modifying\n carriage return/linefeeds (by default WINZIP does this).");
             return false
         } else {
             /* -------------------------------------------------------------------- */
@@ -259,8 +259,8 @@ public class DDFRecord {
 
         pachData = [byte]() // byte[nDataSize];
 
-        if (poModule.read(toData: pachData, offset: 0, length: nDataSize) != nDataSize) {
-            Debug.error("DDFRecord: Data record is short on DDF file.");
+        if (poModule.read(toData: pachData!, offset: 0, length: nDataSize) != nDataSize) {
+            print("DDFRecord: Data record is short on DDF file.");
             return false;
         }
 
@@ -287,7 +287,7 @@ public class DDFRecord {
         /* ==================================================================== */
         paoFields = new Vector(nFieldCount);
 
-        for i in 0..< nFieldCount {
+        for i in 0..<nFieldCount {
             var szTag: String
             var nEntryOffset = i * nFieldEntryWidth;
             var nFieldLength: Int
@@ -299,7 +299,7 @@ public class DDFRecord {
             szTag = String(pachData, nEntryOffset, _sizeFieldTag)
 
             nEntryOffset += _sizeFieldTag
-            nFieldLength = Int(String(pachData, nEntryOffset, _sizeFieldLength))
+            nFieldLength = Int(String(pachData, nEntryOffset, _sizeFieldLength))!
             nEntryOffset += _sizeFieldLength
             nFieldPos = Int(String(pachData, nEntryOffset, _sizeFieldPos))
 
@@ -309,7 +309,7 @@ public class DDFRecord {
             let poFieldDefn = poModule.findFieldDefn(pszFieldName: szTag) // DDFFieldDefinition
 
             if (poFieldDefn == nil) {
-                Debug.error("DDFRecord: Undefined field " + szTag + " encountered in data record.");
+                print("DDFRecord: Undefined field " + szTag + " encountered in data record.");
                 return false;
             }
 
@@ -321,19 +321,18 @@ public class DDFRecord {
                 /* Assign info the DDFField. */
                 /* -------------------------------------------------------------------- */
                 var tempData = [byte]() //byte[nFieldLength];
-                System.arraycopy(pachData, _fieldAreaStart + nFieldPos
-                        - DDF_LEADER_SIZE, tempData, 0, tempData.length);
+                System.arraycopy(pachData, _fieldAreaStart + nFieldPos - DDF_LEADER_SIZE, tempData, 0, tempData.length);
 
-                ddff = DDFField(poFieldDefn, tempData, readSubfields)
+                ddff = DDFField(poDefnIn: poFieldDefn!, pachDataIn: tempData, doSubfields: readSubfields)
 
             } else {
 
                 // Save the info for reading later directly out of the
                 // field.
-                ddff = DDFField(poFieldDefn, nFieldPos, nFieldLength)
-                ddff.setHeaderOffset(poModule._recLength + _fieldAreaStart)
+                ddff = DDFField(poDefnIn: poFieldDefn!, dataPositionIn: nFieldPos, dataLengthIn: nFieldLength)
+                ddff?.setHeaderOffset(headerOffsetIn: poModule._recLength + _fieldAreaStart)
             }
-            paoFields.add(ddff);
+            paoFields?.append(ddff!)
         }
 
         return true;
@@ -430,13 +429,13 @@ public class DDFRecord {
         /* Get a pointer to the data. */
         /* -------------------------------------------------------------------- */
         var nBytesRemaining: Int
-        var pachData: [byte] = poField.getSubfieldData(poSFDefn: poSFDefn, pnMaxBytes: &nBytesRemaining, iSubfieldIndex: iSubfieldIndex)!
+        var pachData: [byte] = poField.getSubfieldData(poSFDefn: poSFDefn, pnMaxBytes: &nBytesRemaining, iSubfieldIndex: &iSubfieldIndex)!
 
         /* -------------------------------------------------------------------- */
         /* Return the extracted value. */
         /* -------------------------------------------------------------------- */
 
-        return poSFDefn?.extractIntData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil)
+        return (poSFDefn?.extractIntData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil))!
     }
 
     /**
@@ -460,7 +459,7 @@ public class DDFRecord {
         /* -------------------------------------------------------------------- */
         /* Fetch the field. If this fails, return zero. */
         /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)
+        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!
         if (poField == nil) {
             return 0;
         }
@@ -508,7 +507,7 @@ public class DDFRecord {
         /* -------------------------------------------------------------------- */
         /* Fetch the field. If this fails, return zero. */
         /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex);
+        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!;
         if (poField == nil) {
             return nil;
         }

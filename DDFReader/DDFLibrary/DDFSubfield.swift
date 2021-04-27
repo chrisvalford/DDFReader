@@ -48,18 +48,15 @@ public class DDFSubfield {
         let ddfdt: DDFDataType = poSFDefn.getType();
 
         if (ddfdt == DDFDataType.DDFInt) {
-            setValue(Integer(defn.extractIntData(pachFieldData,
-                    nBytesRemaining,
-                    nBytesConsumed)));
+            setValue(o: Int(defn.extractIntData(pachFieldData, nBytesRemaining, nBytesConsumed)))
         } else if (ddfdt == DDFDataType.DDFFloat) {
-            setValue(Double(defn.extractFloatData(pachFieldData,
-                    nBytesRemaining,
-                    nBytesConsumed)));
-        } else if (ddfdt == DDFDataType.DDFString
-                || ddfdt == DDFDataType.DDFBinaryString) {
-            setValue(defn.extractStringData(pachFieldData,
-                    nBytesRemaining,
-                    nBytesConsumed));
+            setValue(o: Double(defn?.extractFloatData(pachSourceData: pachFieldData,
+                                                      nMaxBytes: nBytesRemaining,
+                                                      pnConsumedBytes: nBytesConsumed)))
+        } else if (ddfdt == DDFDataType.DDFString || ddfdt == DDFDataType.DDFBinaryString) {
+            setValue(defn.extractStringData(pachSourceData: pachFieldData,
+                                            nMaxBytes: nBytesRemaining,
+                                            pnConsumedBytes: nBytesConsumed));
         }
 
         byteSize = nBytesConsumed
@@ -74,7 +71,7 @@ public class DDFSubfield {
     }
 
     public func getDefn() -> DDFSubfieldDefinition {
-        return defn;
+        return defn!
     }
 
     /**
@@ -127,9 +124,9 @@ public class DDFSubfield {
      * Return a string 'key = value', describing the field and its
      * value.
      */
-    public func toString() -> String {
+    public func toString() -> String{
         if defn != nil {
-            return "\(defn.getName()) = \(value)"
+            return "\(defn?.getName()) = \(value)"
         }
         return ""
     }

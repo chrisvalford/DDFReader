@@ -93,7 +93,7 @@ public class DDFModule {
         if fpDDF.read(achLeader) != DDF_LEADER_SIZE {
             destroy();
             if (Debug.debugging("iso8211")) {
-                Debug.output("DDFModule: Leader is short on DDF file "
+                print("DDFModule: Leader is short on DDF file "
                         + pszFilename);
             }
             return nil;
@@ -141,8 +141,8 @@ public class DDFModule {
             }
 
             if (Debug.debugging("iso8211")) {
-                Debug.output("bValid = " + bValid + ", from " + String(achLeader));
-                Debug.output(toString());
+                print("bValid = " + bValid + ", from " + String(achLeader));
+                print(toString());
             }
         }
 
@@ -152,14 +152,14 @@ public class DDFModule {
             destroy();
 
             if Debug.debugging("iso8211") {
-                Debug.error("DDFModule: File " + pszFilename
+                print("DDFModule: File " + pszFilename
                         + " does not appear to have a valid ISO 8211 header.");
             }
             return nil;
         }
 
         if Debug.debugging("iso8211") {
-            Debug.output("DDFModule:  header parsed successfully");
+            print("DDFModule:  header parsed successfully");
 
         }
 
@@ -173,7 +173,7 @@ public class DDFModule {
 
         if (fpDDF.read(pachRecord, achLeader.length, numNewRead) != numNewRead) {
             if (Debug.debugging("iso8211")) {
-                Debug.error("DDFModule: Header record is short on DDF file " + pszFilename);
+                print("DDFModule: Header record is short on DDF file " + pszFilename);
             }
 
             return nil;
@@ -196,7 +196,7 @@ public class DDFModule {
 
         for i in 0..<nFieldDefnCount {
             if (Debug.debugging("iso8211")) {
-                Debug.output("DDFModule.open: Reading field " + i)
+                print("DDFModule.open: Reading field " + i)
             }
 
             var szTag = [byte]() // byte[128];
@@ -323,7 +323,7 @@ public class DDFModule {
             let pszThisName = ddffd.getName()
 
             if (Debug.debugging("iso8211detail")) {
-                Debug.output("DDFModule.findFieldDefn(" + pszFieldName + ":"
+                print("DDFModule.findFieldDefn(" + pszFieldName + ":"
                         + pszFieldName.length() + ") checking against ["
                         + pszThisName + ":" + pszThisName.length() + "]");
             }
@@ -380,7 +380,7 @@ public class DDFModule {
             do {
                 return fpDDF.read(toData, offset, length);
             } catch {
-                Debug.error("DDFModule.read(): "
+                print("DDFModule.read(): "
                         + error.localizedDescription
                         + " reading from "
                         + offset
@@ -410,7 +410,7 @@ public class DDFModule {
             do {
                 return fpDDF.read();
             } catch {
-                Debug.error("DDFModule.read(): IOException caught");
+                print("DDFModule.read(): IOException caught");
             }
         }
         return 0;

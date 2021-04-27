@@ -16,9 +16,10 @@ public class DDFUtils {
     /** ********************************************************************* */
 
     public static func scanVariable(pszRecord: [byte], nMaxChars: Int, nDelimChar: Character) -> Int {
-        var i: Int
-        for (i = 0; i < nMaxChars - 1 && pszRecord[i] != nDelimChar; i++) {
-        }
+        var i = -1
+        repeat {
+            i += 1
+        } while i < nMaxChars - 1 && pszRecord[i] != nDelimChar
         return i;
     }
 
@@ -34,16 +35,14 @@ public class DDFUtils {
                                      nDelimChar1: Character,
                                      nDelimChar2: Character,
                                      pnConsumedChars: inout Int) -> String {
-        var i: Int
+        var i = -1
+        repeat {
+            i += 1
+        } while i < nMaxChars - 1 && pszRecord[i] != nDelimChar1 && pszRecord[i] != nDelimChar2
 
-        for (i = 0; i < nMaxChars - 1 && pszRecord[i] != nDelimChar1
-                && pszRecord[i] != nDelimChar2; i++) {
-        }
-
-        pnConsumedChars.value = i;
-        if (i < nMaxChars
-                && (pszRecord[i] == nDelimChar1 || pszRecord[i] == nDelimChar2)) {
-            pnConsumedChars.value += 1
+        pnConsumedChars = i;
+        if (i < nMaxChars && (pszRecord[i] == nDelimChar1 || pszRecord[i] == nDelimChar2)) {
+            pnConsumedChars += 1
         }
 
         var pszReturnBytes = [byte]() // byte[i];
