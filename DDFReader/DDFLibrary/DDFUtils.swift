@@ -56,7 +56,7 @@ public class DDFUtils {
     
     /// Copies the contents of an array into another array
     ///
-    /// - Parameter source: The source array,
+    /// - Parameter source: The source array
     /// - Parameter sourceStart: The starting position to copy from source array
     /// - Parameter destination: The destination array
     /// - Parameter destinationStart: The starting position in the destination array
@@ -69,5 +69,17 @@ public class DDFUtils {
         // The destination range
         let dRange = destinationStart..<destinationStart+count
         destination.replaceSubrange(dRange, with: sourceSubArray)
+    }
+    
+    /// Gets a string from an array of UTF8 chars
+    ///
+    /// - Parameter from: The source array
+    /// - Parameter start: The starting position to copy from
+    /// - Parameter length: The number of elements to be copied.
+    ///
+    /// - Returns the String or nil
+    public static func string(from source: [UInt8], start: Int, length: Int) -> String? {
+        let subArray = Array(source[start...start+length-1])
+        return String(decoding: subArray, as: UTF8.self)
     }
 }

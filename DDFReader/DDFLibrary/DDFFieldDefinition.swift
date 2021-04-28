@@ -388,10 +388,11 @@ public class DDFFieldDefinition {
         /* Apply the format items to subfields. */
         /* -------------------------------------------------------------------- */
 
-       var iFormatItem = 0
-        for (Iterator it = papszFormatItems.iterator(); it.hasNext(); iFormatItem++) {
-
-            let pszPastPrefix: String = it.next();
+//       var iFormatItem = 0
+//        for (Iterator it = papszFormatItems.iterator(); it.hasNext(); iFormatItem++) {
+//
+//            let pszPastPrefix: String = it.next();
+//        }
 
         var iFormatItem = 0
         for item in papszFormatItems {

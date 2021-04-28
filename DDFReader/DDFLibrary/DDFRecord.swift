@@ -191,22 +191,16 @@ public class DDFRecord {
         var _sizeFieldTag: Int
         var _leaderIden: byte
 
-        do {
-            var recLength = String(achLeader, 0, 5)
-            var fieldAreaStart = String(achLeader, 12, 5)
-            _recLength = Int(recLength)
-            _fieldAreaStart = Int(fieldAreaStart)
-        } catch {
-
+        if let recLength = DDFUtils.string(from: achLeader, start: 0, length: 5), let fieldAreaStart = DDFUtils.string(from: achLeader, start: 12, length: 5) {
+            _recLength = Int(recLength)!
+            _fieldAreaStart = Int(fieldAreaStart)!
+            print("Finished reading headers")
+        } else {
             // Turns out, this usually indicates the end of the header
             // information,
             // with "^^^^^^^" being in the file. This is filler.
             #if DEBUG
-            print("Finished reading headers");
-            #endif
-            #if DEBUG
-            print("DDFRecord.readHeader(): \(error.localizedDescription)")
-            #else
+            print("DDFRecord.readHeader(): failed")
             print("Data record appears to be corrupt on DDF file.\n -- ensure that the files were uncompressed without modifying\n carriage return/linefeeds (by default WINZIP does this).")
             #endif
             return false
@@ -296,12 +290,12 @@ public class DDFRecord {
             /* -------------------------------------------------------------------- */
             /* Read the position information and tag. */
             /* -------------------------------------------------------------------- */
-            szTag = String(pachData, nEntryOffset, _sizeFieldTag)
+            szTag = DDFUtils.string(from: pachData!, start: nEntryOffset, length: _sizeFieldTag)!
 
             nEntryOffset += _sizeFieldTag
-            nFieldLength = Int(String(pachData, nEntryOffset, _sizeFieldLength))!
+            nFieldLength = Int(DDFUtils.string(from: pachData!, start: nEntryOffset, length: _sizeFieldLength)!)!
             nEntryOffset += _sizeFieldLength
-            nFieldPos = Int(String(pachData, nEntryOffset, _sizeFieldPos))!
+            nFieldPos = Int(DDFUtils.string(from: pachData!, start: nEntryOffset, length: _sizeFieldPos)!)!
 
             /* -------------------------------------------------------------------- */
             /* Find the corresponding field in the module directory. */
