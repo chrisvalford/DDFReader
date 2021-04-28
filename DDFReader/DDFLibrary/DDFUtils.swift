@@ -16,10 +16,12 @@ public class DDFUtils {
     /** ********************************************************************* */
 
     public static func scanVariable(pszRecord: [byte], nMaxChars: Int, nDelimChar: Character) -> Int {
-        var i: Int
-        for (i = 0; i < nMaxChars - 1 && pszRecord[i] != nDelimChar; i++) {
+        for n in 0..<nMaxChars - 1 {
+            if pszRecord[n] == nDelimChar.asciiValue {
+                return n
+            }
         }
-        return i;
+        return -1
     }
 
     /** ********************************************************************* */
@@ -34,21 +36,38 @@ public class DDFUtils {
                                      nDelimChar1: Character,
                                      nDelimChar2: Character,
                                      pnConsumedChars: inout Int) -> String {
-        var i: Int
+        var i = 0
 
-        for (i = 0; i < nMaxChars - 1 && pszRecord[i] != nDelimChar1
-                && pszRecord[i] != nDelimChar2; i++) {
+        while i < nMaxChars - 1 && pszRecord[i] != nDelimChar1.utf8.first && pszRecord[i] != nDelimChar2.utf8.first {
+            i += 1
         }
 
-        pnConsumedChars.value = i;
+        pnConsumedChars = i
         if (i < nMaxChars
-                && (pszRecord[i] == nDelimChar1 || pszRecord[i] == nDelimChar2)) {
-            pnConsumedChars.value += 1
+                && (pszRecord[i] == nDelimChar1.asciiValue || pszRecord[i] == nDelimChar2.asciiValue)) {
+            pnConsumedChars += 1
         }
 
         var pszReturnBytes = [byte]() // byte[i];
-        System.arraycopy(pszRecord, 0, pszReturnBytes, 0, i);
+        arraycopy(source: pszRecord, sourceStart: 0, destination: &pszReturnBytes, destinationStart: 0, count: i);
 
         return String(bytes: pszReturnBytes, encoding: .utf8)!
+    }
+    
+    /// Copies the contents of an array into another array
+    ///
+    /// - Parameter source: The source array,
+    /// - Parameter sourceStart: The starting position to copy from source array
+    /// - Parameter destination: The destination array
+    /// - Parameter destinationStart: The starting position in the destination array
+    /// - Parameter count: The number of elements to be copied.
+    ///
+    /// TODO: Increase the size of the destination array dynamically to fit
+    public static func arraycopy<T>(source: [T], sourceStart: Int, destination: inout [T], destinationStart: Int, count: Int) {
+        // The source data
+        let sourceSubArray = source[sourceStart..<sourceStart+count]
+        // The destination range
+        let dRange = destinationStart..<destinationStart+count
+        destination.replaceSubrange(dRange, with: sourceSubArray)
     }
 }

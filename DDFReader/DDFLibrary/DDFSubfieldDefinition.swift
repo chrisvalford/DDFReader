@@ -17,21 +17,21 @@ import Foundation
  *         for S-57)
  */
 public class DDFSubfieldDefinition {
-
+    
     var pszName: String? // a.k.a. subfield mnemonic
     var pszFormatString: String
     var eType: DDFDataType
     var eBinaryFormat: DDFBinaryFormat
-
+    
     /**
      * bIsVariable determines whether we using the chFormatDelimeter (true), or
      * the fixed width (false).
      */
     var bIsVariable: Bool
-
+    
     var chFormatDelimeter: Character
     var nFormatWidth: Int
-
+    
     enum DDFBinaryFormat: Int {
         case NotBinary = 0
         case UInt = 1
@@ -40,21 +40,21 @@ public class DDFSubfieldDefinition {
         case FloatReal = 4
         case FloatComplex = 5
     }
-
+    
     public func getWidth() -> Int {
         return nFormatWidth;
     }
-
+    
     /** Get pointer to subfield name. */
     public func getName() -> String {
         return pszName!
     }
-
+    
     /** Get pointer to subfield format string */
     public func getFormat() -> String {
         return pszFormatString;
     }
-
+    
     /**
      * Get the general type of the subfield. This can be used to determine which
      * of ExtractFloatData(), ExtractIntData() or ExtractStringData() should be
@@ -66,7 +66,7 @@ public class DDFSubfieldDefinition {
     public func getType() -> DDFDataType {
         return eType;
     }
-
+    
     public init() {
         pszName = nil;
         bIsVariable = true;
@@ -76,14 +76,14 @@ public class DDFSubfieldDefinition {
         eType = DDFDataType.DDFString;
         pszFormatString = ""
     }
-
+    
     /**
      * Set the name of the subfield.
      */
     public func setName(pszNewName: String) {
         pszName = pszNewName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-
+    
     /**
      * While interpreting the format string we don't support:
      * <UL>
@@ -95,110 +95,104 @@ public class DDFSubfieldDefinition {
      */
     public func setFormat(pszFormat: String) -> Bool {
         pszFormatString = pszFormat;
-
-        if (Debug.debugging("iso8211")) {
-            Debug.output("DDFSubfieldDefinition.setFormat(" + pszFormat + ")");
-        }
-
+        
+        #if DEBUG
+        print("DDFSubfieldDefinition.setFormat(" + pszFormat + ")");
+        #endif
+        
         /* -------------------------------------------------------------------- */
         /* These values will likely be used. */
         /* -------------------------------------------------------------------- */
         if pszFormatString.count > 1 && pszFormatString.char(at: 1) == "(" {
-
+            
             // Need to loop through characters to grab digits, and
             // then get integer version. If we look a the atoi code,
             // it checks for non-digit characters and then stops.
-           var i = 3;
-            for (; i < pszFormat.length()
-                    && Character.isDigit(pszFormat.char(at: i)); i++) {
+            var i = 3;
+            while i < pszFormat.count && pszFormat.char(at: i).isNumber {
+                i += 1
             }
-
-            nFormatWidth = Integer.parseInt(pszFormat.substring(2, i));
-            bIsVariable = (nFormatWidth == 0);
+            
+            nFormatWidth = Int(pszFormat.substring(2, i))
+            bIsVariable = (nFormatWidth == 0)
         } else {
-            bIsVariable = true;
+            bIsVariable = true
         }
-
+        
         /* -------------------------------------------------------------------- */
         /* Interpret the format string. */
         /* -------------------------------------------------------------------- */
         switch (pszFormatString.char(at: 0)) {
-
+        
         case "A", "C": // It isn't clear to me how this is different than 'A'
             eType = DDFDataType.DDFString
-
+            
         case "R":
             eType = DDFDataType.DDFFloat;
-
+            
         case "I", "S":
             eType = DDFDataType.DDFInt;
-
+            
         case "B", "b":
             // Is the width expressed in bits? (is it a bitstring)
             bIsVariable = false;
             if (pszFormatString.char(at: 1) == "(") {
-
-               let numEndIndex = 2;
-                for (; numEndIndex < pszFormatString.length()
-                        && Character.isDigit(pszFormatString
-                                .char(at: numEndIndex)); numEndIndex++) {
+                
+                var numEndIndex = 2
+                while numEndIndex < pszFormatString.count && pszFormatString.char(at: numEndIndex).isNumber {
+                    numEndIndex += 1
                 }
-
+                
                 let numberString = pszFormatString.substring(2, numEndIndex)
                 nFormatWidth = Int(numberString)
-
-                if (nFormatWidth % 8 != 0) {
-                    Debug.error("DDFSubfieldDefinition.setFormat() problem with "
-                                    + pszFormatString.char(at: 0)
-                                    + " not being modded with 8 evenly");
-                    return false;
+                
+                if nFormatWidth % 8 != 0 {
+                    print("DDFSubfieldDefinition.setFormat() problem with \(pszFormatString.char(at: 0)) not being modded with 8 evenly");
+                    return false
                 }
-
+                
                 nFormatWidth = Int(numberString) / 8
-
-                eBinaryFormat = DDFBinaryFormat.SInt; // good
-                // default,
-                // works for
-                // SDTS.
-
+                eBinaryFormat = DDFBinaryFormat.SInt // good default, works for SDTS.
+                
                 if (nFormatWidth < 5) {
                     eType = DDFDataType.DDFInt;
                 } else {
                     eType = DDFDataType.DDFBinaryString;
                 }
-
+                
             } else { // or do we have a binary type indicator? (is it binary)
-
-                eBinaryFormat = Int(pszFormatString.char(at: 1) - "0")
-
-               let numEndIndex = 2;
-                for (; numEndIndex < pszFormatString.count && Character.isDigit(pszFormatString.char(at: numEndIndex)); numEndIndex++) {
+                
+                eBinaryFormat = DDFBinaryFormat(rawValue: Int(pszFormatString.char(at: 1).asciiValue! - "0".utf8.first!))!
+                
+                var numEndIndex = 2;
+                while numEndIndex < pszFormatString.count && pszFormatString.char(at: numEndIndex).isNumber {
+                    numEndIndex += 1
                 }
-                nFormatWidth = Integer.valueOf(pszFormatString.substring(2,numEndIndex)).intValue();
-
+                nFormatWidth = Int(pszFormatString.substring(2,numEndIndex))
+                
                 if (eBinaryFormat == DDFBinaryFormat.SInt || eBinaryFormat == DDFBinaryFormat.UInt) {
                     eType = DDFDataType.DDFInt;
                 } else {
                     eType = DDFDataType.DDFFloat;
                 }
             }
-
+            
         case "X":
             // 'X' is extra space, and shouldn't be directly assigned
             // to a
             // subfield ... I haven't encountered it in use yet
             // though.
-            Debug.error("DDFSubfieldDefinition: Format type of " + pszFormatString.char(at: 0) + " not supported.");
-
+            print("DDFSubfieldDefinition: Format type of \(pszFormatString.char(at: 0)) not supported.")
+            
             return false
         default:
-            Debug.error("DDFSubfieldDefinition: Format type of " + pszFormatString.char(at: 0) + " not recognised.");
+            print("DDFSubfieldDefinition: Format type of \(pszFormatString.char(at: 0)) not recognised.")
             return false
         }
-
+        
         return true
     }
-
+    
     /**
      * Write out subfield definition info. A variety of information about this
      * field definition is written to the give debugging file handle.
@@ -213,7 +207,7 @@ public class DDFSubfieldDefinition {
         sb.append("\n")
         return sb
     }
-
+    
     /**
      * Scan for the end of variable length data. Given a pointer to the data for
      * this subfield (from within a DDFRecord) this method will return the
@@ -242,10 +236,7 @@ public class DDFSubfieldDefinition {
     public func getDataLength(pachSourceData: [byte], nMaxBytes: Int, pnConsumedBytes: inout Int?) -> Int {
         if bIsVariable == false {
             if nFormatWidth > nMaxBytes {
-                Debug.error("DDFSubfieldDefinition: Only " + nMaxBytes
-                        + " bytes available for subfield " + pszName
-                        + " with format string " + pszFormatString
-                        + " ... returning shortened data.");
+                print("DDFSubfieldDefinition: Only \(nMaxBytes) bytes available for subfield  \(pszName ?? "Unknown") with format string \(pszFormatString) ... returning shortened data.")
                 if pnConsumedBytes != nil {
                     pnConsumedBytes = nMaxBytes
                 }
@@ -257,9 +248,9 @@ public class DDFSubfieldDefinition {
                 return nFormatWidth
             }
         } else {
-           var nLength = 0
+            var nLength = 0
             var bCheckFieldTerminator = true
-
+            
             /*
              * We only check for the field terminator because of some buggy
              * datasets with missing format terminators. However, we have found
@@ -269,13 +260,13 @@ public class DDFSubfieldDefinition {
              * which we established by the first character being out of the
              * ASCII printable range (32-127).
              */
-
+            
             if pachSourceData[0] < 32 || pachSourceData[0] >= 127 {
                 bCheckFieldTerminator = false
             }
-
-            while nLength < nMaxBytes && pachSourceData[nLength] != chFormatDelimeter {
-                if bCheckFieldTerminator && pachSourceData[nLength] == DDF_FIELD_TERMINATOR {
+            
+            while nLength < nMaxBytes && pachSourceData[nLength] != chFormatDelimeter.utf8 {
+                if bCheckFieldTerminator && pachSourceData[nLength] == DDF_FIELD_TERMINATOR.utf8 {
                     break
                 }
                 nLength += 1
@@ -290,7 +281,7 @@ public class DDFSubfieldDefinition {
             return nLength
         }
     }
-
+    
     /**
      * Extract a zero terminated string containing the data for this subfield.
      * Given a pointer to the data for this subfield (from within a DDFRecord)
@@ -324,23 +315,21 @@ public class DDFSubfieldDefinition {
      *         should not be freed by the application.
      */
     func extractStringData(pachSourceData: [byte], nMaxBytes: Int, pnConsumedBytes: inout Int?) -> String {
-       var oldConsumed = 0
+        var oldConsumed = 0
         if (pnConsumedBytes != nil) {
-            oldConsumed = pnConsumedBytes
+            oldConsumed = pnConsumedBytes!
         }
-
-       var nLength = getDataLength(pachSourceData, nMaxBytes, pnConsumedBytes);
+        
+        var nLength = getDataLength(pachSourceData: pachSourceData, nMaxBytes: nMaxBytes, pnConsumedBytes: &pnConsumedBytes);
         let ns = String(pachSourceData, 0, nLength);
-
-        if (Debug.debugging("iso8211detail") && pnConsumedBytes != nil) {
-            Debug.output("        extracting string data from " + nLength
-                    + " bytes of " + pachSourceData.length + ": " + ns
-                    + ": consumed " + pnConsumedBytes.value + " vs. "
-                    + oldConsumed + ", max = " + nMaxBytes);
-        }
+        
+        //if (Debug.debugging("iso8211detail") && pnConsumedBytes != nil) {
+        #if DEBUG
+        print("        extracting string data from \(nLength) bytes of \(pachSourceData.count): \(ns): consumed \(pnConsumedBytes ?? 0) vs. \(oldConsumed), max = \(nMaxBytes)")
+        #endif
         return ns
     }
-
+    
     /**
      * Extract a subfield value as a float. Given a pointer to the data for this
      * subfield (from within a DDFRecord) this method will return the floating
@@ -364,103 +353,105 @@ public class DDFSubfieldDefinition {
      * @return The subfield's numeric value (or zero if it isn't numeric).
      */
     public func extractFloatData(pachSourceData: [byte], nMaxBytes: Int, pnConsumedBytes: inout Int?) -> Double {
-
+        
         switch (pszFormatString.char(at: 0)) {
         case "A","I","R","S","C":
-            let dataString = extractStringData(pachSourceData, nMaxBytes, pnConsumedBytes)
+            let dataString = extractStringData(pachSourceData: pachSourceData, nMaxBytes: nMaxBytes, pnConsumedBytes: &pnConsumedBytes)
             if dataString.count == 0 {
                 return 0
             }
             do {
-                return Double(dataString)
+                return Double(dataString)!
             } catch {
-                if (Debug.debugging("iso8211")) {
-                    Debug.output("DDFSubfieldDefinition.extractFloatData: number format problem: " + dataString);
-                }
+                #if DEBUG
+                print("DDFSubfieldDefinition.extractFloatData: number format problem: " + dataString);
+                #endif
                 return 0
             }
-
+            
         case "B","b":
             var abyData = [byte]() // byte[8];
-
+            
             if pnConsumedBytes != nil {
                 pnConsumedBytes = nFormatWidth
             }
-
+            
             if nFormatWidth > nMaxBytes {
-                Debug.error("DDFSubfieldDefinition: format width is greater than max bytes for float")
+                print("DDFSubfieldDefinition: format width is greater than max bytes for float")
                 return 0.0
             }
-
+            
             // Byte swap the data if it isn't in machine native
             // format. In any event we copy it into our buffer to
             // ensure it is word aligned.
             //
             // DFD - don't think this applies to Java, since it's
             // always big endian
-
+            
             // if (pszFormatString.char(at: 0) == 'B') ||
             // (pszFormatString.char(at: 0) == 'b') {
             // for (int i = 0; i < nFormatWidth; i++) {
             // abyData[nFormatWidth-i-1] = pachSourceData[i];
             // }
             // } else {
-            // System.arraycopy(pachSourceData, 0, abyData, 8-nFormatWidth,
+            // DDFUtils.arraycopy(pachSourceData, 0, abyData, 8-nFormatWidth,
             // nFormatWidth);
-            System.arraycopy(pachSourceData, 0, abyData, 0, nFormatWidth);
+            DDFUtils.arraycopy(source: pachSourceData,
+                               sourceStart: 0,
+                               destination: &abyData,
+                               destinationStart: 0,
+                               count: nFormatWidth)
             // }
-
+            
             // Interpret the bytes of data.
             switch (eBinaryFormat) {
             case DDFBinaryFormat.UInt, DDFBinaryFormat.SInt, DDFBinaryFormat.FloatReal:
-                return pszFormatString.char(at: 0) == "B" ? MoreMath
-                        .BuildIntegerBE(abyData) : MoreMath
-                        .BuildIntegerLE(abyData);
-
-                // if (nFormatWidth == 1)
-                // return(abyData[0]);
-                // else if (nFormatWidth == 2)
-                // return(*((GUInt16 *) abyData));
-                // else if (nFormatWidth == 4)
-                // return(*((GUInt32 *) abyData));
-                // else {
-                // return 0.0;
-                // }
-
-                // case DDFBinaryFormat.SInt:
-                // if (nFormatWidth == 1)
-                // return(*((signed char *) abyData));
-                // else if (nFormatWidth == 2)
-                // return(*((GInt16 *) abyData));
-                // else if (nFormatWidth == 4)
-                // return(*((GInt32 *) abyData));
-                // else {
-                // return 0.0;
-                // }
-
-                // case DDFBinaryFormat.FloatReal:
-                // if (nFormatWidth == 4)
-                // return(*((float *) abyData));
-                // else if (nFormatWidth == 8)
-                // return(*((double *) abyData));
-                // else {
-                // return 0.0;
-                // }
-
+                return pszFormatString.char(at: 0) == "B" ? MoreMath.BuildIntegerBE(abyData) : MoreMath.BuildIntegerLE(abyData);
+                
+            // if (nFormatWidth == 1)
+            // return(abyData[0]);
+            // else if (nFormatWidth == 2)
+            // return(*((GUInt16 *) abyData));
+            // else if (nFormatWidth == 4)
+            // return(*((GUInt32 *) abyData));
+            // else {
+            // return 0.0;
+            // }
+            
+            // case DDFBinaryFormat.SInt:
+            // if (nFormatWidth == 1)
+            // return(*((signed char *) abyData));
+            // else if (nFormatWidth == 2)
+            // return(*((GInt16 *) abyData));
+            // else if (nFormatWidth == 4)
+            // return(*((GInt32 *) abyData));
+            // else {
+            // return 0.0;
+            // }
+            
+            // case DDFBinaryFormat.FloatReal:
+            // if (nFormatWidth == 4)
+            // return(*((float *) abyData));
+            // else if (nFormatWidth == 8)
+            // return(*((double *) abyData));
+            // else {
+            // return 0.0;
+            // }
+            
             case DDFBinaryFormat.NotBinary, DDFBinaryFormat.FPReal, DDFBinaryFormat.FloatComplex:
                 return 0.0
             }
             break;
         // end of 'b'/'B' case.
-
+        
         default:
             break
-
+            
         }
-
+        
         return 0.0
     }
-
+    
     /**
      * Extract a subfield value as an integer. Given a pointer to the data for
      * this subfield (from within a DDFRecord) this method will return the int
@@ -484,92 +475,94 @@ public class DDFSubfieldDefinition {
      * @return The subfield's numeric value (or zero if it isn't numeric).
      */
     public func extractIntData(pachSourceData: [byte], nMaxBytes: Int, pnConsumedBytes: inout Int?) -> Int {
-
+        
         switch (pszFormatString.char(at: 0)) {
         case "A","I","R","S","C":
-            let dataString = extractStringData(pachSourceData, nMaxBytes, pnConsumedBytes)
+            let dataString = extractStringData(pachSourceData: pachSourceData, nMaxBytes: nMaxBytes, pnConsumedBytes: &pnConsumedBytes)
             if dataString.count == 0 {
                 return 0
             }
-
+            
             do {
-                return Double(dataString)
+                return Int(dataString)
             } catch  {
-                if (Debug.debugging("iso8211")) {
-                    Debug.output("DDFSubfieldDefinition.extractIntData: number format problem: "+ dataString);
-                }
+                #if DEBUG
+                print("DDFSubfieldDefinition.extractIntData: number format problem: \(dataString)")
+                #endif
                 return 0
             }
-
+            
         case "B","b":
             var abyData = [byte]() // byte[4];
             if nFormatWidth > nMaxBytes {
-                Debug.error("DDFSubfieldDefinition: format width is greater than max bytes for int");
+                print("DDFSubfieldDefinition: format width is greater than max bytes for int");
                 return 0
             }
-
+            
             if (pnConsumedBytes != nil) {
-                pnConsumedBytes.value = nFormatWidth;
+                pnConsumedBytes = nFormatWidth;
             }
-
-            // System.arraycopy(pachSourceData, 0, abyData, 4-nFormatWidth,
+            
+            // DDFUtils.arraycopy(pachSourceData, 0, abyData, 4-nFormatWidth,
             // nFormatWidth);
-            System.arraycopy(pachSourceData, 0, abyData, 0, nFormatWidth);
-
+            DDFUtils.arraycopy(source: pachSourceData,
+                               sourceStart: 0,
+                               destination: &abyData,
+                               destinationStart: 0,
+                               count: nFormatWidth)
+            
             // Interpret the bytes of data.
             switch (eBinaryFormat) {
             case DDFBinaryFormat.UInt, DDFBinaryFormat.SInt, DDFBinaryFormat.FloatReal:
-                return pszFormatString.char(at: 0) == "B" ? MoreMath
-                        .BuildIntegerBE(abyData) : MoreMath
-                        .BuildIntegerLE(abyData);
-
-                // case DDFBinaryFormat.UInt:
-                // if (nFormatWidth == 4)
-                // return((int) *((GUInt32 *) abyData));
-                // else if (nFormatWidth == 1)
-                // return(abyData[0]);
-                // else if (nFormatWidth == 2)
-                // return(*((GUInt16 *) abyData));
-                // else {
-                // CPLAssert(false);
-                // return 0;
-                // }
-
-                // case DDFBinaryFormat.SInt:
-                // if (nFormatWidth == 4)
-                // return(*((GInt32 *) abyData));
-                // else if (nFormatWidth == 1)
-                // return(*((signed char *) abyData));
-                // else if (nFormatWidth == 2)
-                // return(*((GInt16 *) abyData));
-                // else {
-                // CPLAssert(false);
-                // return 0;
-                // }
-
-                // case DDFBinaryFormat.FloatReal:
-                // if (nFormatWidth == 4)
-                // return((int) *((float *) abyData));
-                // else if (nFormatWidth == 8)
-                // return((int) *((double *) abyData));
-                // else {
-                // CPLAssert(false);
-                // return 0;
-                // }
-
+                return pszFormatString.char(at: 0) == "B" ? MoreMath.BuildIntegerBE(abyData) : MoreMath.BuildIntegerLE(abyData)
+                
+            // case DDFBinaryFormat.UInt:
+            // if (nFormatWidth == 4)
+            // return((int) *((GUInt32 *) abyData));
+            // else if (nFormatWidth == 1)
+            // return(abyData[0]);
+            // else if (nFormatWidth == 2)
+            // return(*((GUInt16 *) abyData));
+            // else {
+            // CPLAssert(false);
+            // return 0;
+            // }
+            
+            // case DDFBinaryFormat.SInt:
+            // if (nFormatWidth == 4)
+            // return(*((GInt32 *) abyData));
+            // else if (nFormatWidth == 1)
+            // return(*((signed char *) abyData));
+            // else if (nFormatWidth == 2)
+            // return(*((GInt16 *) abyData));
+            // else {
+            // CPLAssert(false);
+            // return 0;
+            // }
+            
+            // case DDFBinaryFormat.FloatReal:
+            // if (nFormatWidth == 4)
+            // return((int) *((float *) abyData));
+            // else if (nFormatWidth == 8)
+            // return((int) *((double *) abyData));
+            // else {
+            // CPLAssert(false);
+            // return 0;
+            // }
+            
             case DDFBinaryFormat.NotBinary, DDFBinaryFormat.FPReal, DDFBinaryFormat.FloatComplex:
                 return 0
             }
             break
         // end of 'b'/'B' case.
-
+        
         default:
             return 0
         }
-
+        
         return 0
     }
-
+    
     /**
      * Dump subfield value to debugging file.
      *
@@ -584,28 +577,28 @@ public class DDFSubfieldDefinition {
             sb.append("      Subfield ")
             sb.append(pszName!)
             sb.append("=")
-            sb.append(extractFloatData(pachData, nMaxBytes, nil))
+            sb.append(extractFloatData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
         } else if (eType == DDFDataType.DDFInt) {
             sb.append("      Subfield ")
             sb.append(pszName!)
             sb.append("=")
-            sb.append(extractIntData(pachData, nMaxBytes, nil))
+            sb.append(extractIntData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
         } else if (eType == DDFDataType.DDFBinaryString) {
             sb.append("      Subfield ")
             sb.append(pszName!)
             sb.append("=")
-            sb.append(extractStringData(pachData, nMaxBytes, nil))
+            sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
         } else {
             sb.append("      Subfield ")
             sb.append(pszName!)
             sb.append("=")
-            sb.append(extractStringData(pachData, nMaxBytes, nil))
+            sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
         }
         return sb
     }
-
+    
 }

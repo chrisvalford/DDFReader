@@ -92,10 +92,10 @@ public class DDFModule {
 
         if fpDDF.read(achLeader) != DDF_LEADER_SIZE {
             destroy();
-            if (Debug.debugging("iso8211")) {
-                Debug.output("DDFModule: Leader is short on DDF file "
+            #if DEBUG
+                print("DDFModule: Leader is short on DDF file "
                         + pszFilename);
-            }
+            #endif
             return nil;
         }
 
@@ -109,15 +109,15 @@ public class DDFModule {
             }
         }
 
-        if achLeader[5] != "1" && achLeader[5] != "2" && achLeader[5] != "3" {
+        if achLeader[5] != "1".utf8.first && achLeader[5] != "2".utf8.first && achLeader[5] != "3".utf8.first {
             bValid = false
         }
 
-        if achLeader[6] != "L" {
+        if achLeader[6] != "L".utf8.first {
             bValid = false
         }
 
-        if achLeader[8] != "1" && achLeader[8] != " " {
+        if achLeader[8] != "1".utf8.first && achLeader[8] != " ".utf8.first {
             bValid = false
         }
 
@@ -131,7 +131,7 @@ public class DDFModule {
             _appIndicator = achLeader[9]
             _fieldControlLength = Int(String(achLeader, 10, 2));
             _fieldAreaStart = Int(String(achLeader, 12, 5));
-            _extendedCharSet = String(achLeader[17] + "" + achLeader[18] + "" + achLeader[19])
+            _extendedCharSet = String(bytes: [achLeader[17], 0, achLeader[18], 0, achLeader[19]], encoding: .utf8)!
             _sizeFieldLength = Int(String(achLeader, 20, 1));
             _sizeFieldPos = Int(String(achLeader, 21, 1));
             _sizeFieldTag = Int(String(achLeader, 23, 1));
@@ -140,10 +140,10 @@ public class DDFModule {
                 bValid = false
             }
 
-            if (Debug.debugging("iso8211")) {
-                Debug.output("bValid = " + bValid + ", from " + String(achLeader));
-                Debug.output(toString());
-            }
+            #if DEBUG
+            print("bValid = \(bValid), from \(achLeader)")
+            print(toString());
+            #endif
         }
 
         // If the header is invalid, then clean up, report the error
@@ -151,30 +151,32 @@ public class DDFModule {
         if (!bValid) {
             destroy();
 
-            if Debug.debugging("iso8211") {
-                Debug.error("DDFModule: File " + pszFilename
-                        + " does not appear to have a valid ISO 8211 header.");
-            }
-            return nil;
+            #if DEBUG
+            print("DDFModule: File " + pszFilename + " does not appear to have a valid ISO 8211 header.");
+            #endif
+            return nil
         }
 
-        if Debug.debugging("iso8211") {
-            Debug.output("DDFModule:  header parsed successfully");
-
-        }
+        #if DEBUG
+        print("DDFModule:  header parsed successfully");
+        #endif
 
         /* -------------------------------------------------------------------- */
         /* Read the whole record into memory. */
         /* -------------------------------------------------------------------- */
         var pachRecord = [byte]() // byte[_recLength];
 
-        System.arraycopy(achLeader, 0, pachRecord, 0, achLeader.length);
-       var numNewRead = pachRecord.length - achLeader.length;
+        DDFUtils.arraycopy(source: achLeader,
+                           sourceStart: 0,
+                           destination: &pachRecord,
+                           destinationStart: 0,
+                           count: achLeader.count)
+       var numNewRead = pachRecord.count - achLeader.count
 
-        if (fpDDF.read(pachRecord, achLeader.length, numNewRead) != numNewRead) {
-            if (Debug.debugging("iso8211")) {
-                Debug.error("DDFModule: Header record is short on DDF file " + pszFilename);
-            }
+        if fpDDF.read(pachRecord, achLeader.count, numNewRead) != numNewRead {
+            #if DEBUG
+            print("DDFModule: Header record is short on DDF file " + pszFilename);
+            #endif
 
             return nil;
         }
@@ -195,29 +197,33 @@ public class DDFModule {
         paoFieldDefns = [DDFFieldDefinition]()
 
         for i in 0..<nFieldDefnCount {
-            if (Debug.debugging("iso8211")) {
-                Debug.output("DDFModule.open: Reading field " + i)
-            }
+            #if DEBUG
+                print("DDFModule.open: Reading field \(i)")
+            #endif
 
             var szTag = [byte]() // byte[128];
            var nEntryOffset = DDF_LEADER_SIZE + i * nFieldEntryWidth
             var nFieldLength: Int
             var nFieldPos: Int
 
-            System.arraycopy(pachRecord, nEntryOffset, szTag, 0, _sizeFieldTag)
+            DDFUtils.arraycopy(source: pachRecord,
+                               sourceStart: nEntryOffset,
+                               destination: &szTag,
+                               destinationStart: 0,
+                               count: _sizeFieldTag)
 
             nEntryOffset += _sizeFieldTag;
             nFieldLength = Int(String(pachRecord, nEntryOffset, _sizeFieldLength))
 
             nEntryOffset += _sizeFieldLength;
-            nFieldPos = Int(new String(pachRecord, nEntryOffset, _sizeFieldPos))
+            nFieldPos = Int(String(pachRecord, nEntryOffset, _sizeFieldPos))
 
             var subPachRecord = [byte]() // byte[nFieldLength];
-            System.arraycopy(pachRecord,
-                    _fieldAreaStart + nFieldPos,
-                    subPachRecord,
-                    0,
-                    nFieldLength);
+            DDFUtils.arraycopy(source: pachRecord,
+                               sourceStart: _fieldAreaStart + nFieldPos,
+                               destination: &subPachRecord,
+                               destinationStart: 0,
+                               count: nFieldLength)
 
             paoFieldDefns.add(DDFFieldDefinition(self, String(szTag, 0, _sizeFieldTag), subPachRecord))
         }
@@ -322,11 +328,11 @@ public class DDFModule {
             DDFFieldDefinition ddffd = (DDFFieldDefinition) it.next();
             let pszThisName = ddffd.getName()
 
-            if (Debug.debugging("iso8211detail")) {
-                Debug.output("DDFModule.findFieldDefn(" + pszFieldName + ":"
+            #if DEBUG
+                print("DDFModule.findFieldDefn(" + pszFieldName + ":"
                         + pszFieldName.length() + ") checking against ["
                         + pszThisName + ":" + pszThisName.length() + "]");
-            }
+            #endif
 
             if (pszFieldName.equalsIgnoreCase(pszThisName)) {
                 return ddffd;
@@ -380,7 +386,7 @@ public class DDFModule {
             do {
                 return fpDDF.read(toData, offset, length);
             } catch {
-                Debug.error("DDFModule.read(): "
+                print("DDFModule.read(): "
                         + error.localizedDescription
                         + " reading from "
                         + offset
@@ -410,7 +416,7 @@ public class DDFModule {
             do {
                 return fpDDF.read();
             } catch {
-                Debug.error("DDFModule.read(): IOException caught");
+                print("DDFModule.read(): IOException caught");
             }
         }
         return 0;
@@ -444,7 +450,7 @@ public class DDFModule {
      *         of range.
      */
     public func getField(i: Int) -> DDFFieldDefinition? {
-        if i >= 0 || i < paoFieldDefnscount {
+        if i >= 0 || i < paoFieldDefns.count {
             return paoFieldDefns[i] // (DDFFieldDefinition)
         }
         return nil

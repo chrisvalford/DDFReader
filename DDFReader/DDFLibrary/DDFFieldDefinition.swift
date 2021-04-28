@@ -127,12 +127,9 @@ public class DDFFieldDefinition {
         _data_struct_code = DataStructCode.get(pachFieldArea[0])
         _data_type_code = DataTypeCode.get(pachFieldArea[1])
 
-        if (Debug.debugging("iso8211")) {
-            Debug.output("DDFFieldDefinition.initialize(" + pszTagIn
-                    + "):\n\t\t data_struct_code = " + _data_struct_code
-                    + "\n\t\t data_type_code = " + _data_type_code
-                    + "\n\t\t iFDOffset = " + iFDOffset);
-        }
+        #if DEBUG
+            print("DDFFieldDefinition.initialize(\(pszTagIn)):\n\t\t data_struct_code = \(_data_struct_code)\n\t\t data_type_code = \(_data_type_code)\n\t\t iFDOffset = \(iFDOffset)")
+        #endif
 
         /* -------------------------------------------------------------------- */
         /* Capture the field name, description (sub field names), and */
@@ -140,62 +137,61 @@ public class DDFFieldDefinition {
         /* -------------------------------------------------------------------- */
 
         var tempData = [byte]() // byte[pachFieldArea.length - iFDOffset];
-        System.arraycopy(pachFieldArea,
-                iFDOffset,
-                tempData,
-                0,
-                pachFieldArea.length - iFDOffset);
+        DDFUtils.arraycopy(source: pachFieldArea,
+                           sourceStart: iFDOffset,
+                           destination: &tempData,
+                           destinationStart: 0,
+                           count: pachFieldArea.count - iFDOffset);
 
         var nCharsConsumed = 0
 
-        _fieldName = DDFUtils.fetchVariable(tempData,
-                tempData.count,
-                DDF_UNIT_TERMINATOR,
-                DDF_FIELD_TERMINATOR,
-                nCharsConsumed);
-        if (Debug.debugging("iso8211")) {
-            Debug.output("DDFFieldDefinition.initialize(" + pszTagIn
-                    + "): created field name " + _fieldName);
-        }
+        _fieldName = DDFUtils.fetchVariable(pszRecord: tempData,
+                                            nMaxChars: tempData.count,
+                                            nDelimChar1: DDF_UNIT_TERMINATOR,
+                                            nDelimChar2: DDF_FIELD_TERMINATOR,
+                                            pnConsumedChars: &nCharsConsumed);
+        #if DEBUG
+        print("DDFFieldDefinition.initialize(\(pszTagIn)): created field name \(_fieldName ?? "Unknown")")
+        #endif
 
         iFDOffset += nCharsConsumed
 
         tempData  = [byte]() // byte[pachFieldArea.length - iFDOffset];
-        System.arraycopy(pachFieldArea,
-                iFDOffset,
-                tempData,
-                0,
-                pachFieldArea.length - iFDOffset);
-        _arrayDescr = DDFUtils.fetchVariable(tempData,
-                tempData.count,
-                DDF_UNIT_TERMINATOR,
-                DDF_FIELD_TERMINATOR,
-                nCharsConsumed);
+        DDFUtils.arraycopy(source: pachFieldArea,
+                           sourceStart: iFDOffset,
+                           destination: &tempData,
+                           destinationStart: 0,
+                           count: pachFieldArea.count - iFDOffset);
+        _arrayDescr = DDFUtils.fetchVariable(pszRecord: tempData,
+                                             nMaxChars: tempData.count,
+                                             nDelimChar1: DDF_UNIT_TERMINATOR,
+                                             nDelimChar2: DDF_FIELD_TERMINATOR,
+                                             pnConsumedChars: &nCharsConsumed);
         iFDOffset += nCharsConsumed
 
         tempData = [byte]() // byte[pachFieldArea.length - iFDOffset];
-        System.arraycopy(pachFieldArea,
-                iFDOffset,
-                tempData,
-                0,
-                pachFieldArea.length - iFDOffset);
+        DDFUtils.arraycopy(source: pachFieldArea,
+                           sourceStart: iFDOffset,
+                           destination: &tempData,
+                           destinationStart: 0,
+                           count: pachFieldArea.count - iFDOffset);
 
-        _formatControls = DDFUtils.fetchVariable(tempData,
-                tempData.count,
-                DDF_UNIT_TERMINATOR,
-                DDF_FIELD_TERMINATOR,
-                nCharsConsumed)
+        _formatControls = DDFUtils.fetchVariable(pszRecord: tempData,
+                                                 nMaxChars: tempData.count,
+                                                 nDelimChar1: DDF_UNIT_TERMINATOR,
+                                                 nDelimChar2: DDF_FIELD_TERMINATOR,
+                                                 pnConsumedChars: &nCharsConsumed)
 
         /* -------------------------------------------------------------------- */
         /* Parse the subfield info. */
         /* -------------------------------------------------------------------- */
-        if (_data_struct_code != DataStructCode.ELEMENTARY) {
-            if (!buildSubfieldDefns(pszSublist: _arrayDescr)) {
-                return false;
+        if _data_struct_code != DataStructCode.ELEMENTARY {
+            if !buildSubfieldDefns(pszSublist: _arrayDescr) {
+                return false
             }
 
-            if (!applyFormats(_formatControls: _formatControls)) {
-                return false;
+            if !applyFormats(_formatControls: _formatControls) {
+                return false
             }
         }
 
@@ -256,43 +252,11 @@ public class DDFFieldDefinition {
         paoSubfieldDefns = [DDFSubfieldDefinition]()
         
         for subfieldName in papszSubfieldNames {
-            var ddfsd = DDFSubfieldDefinition()
+            let ddfsd = DDFSubfieldDefinition()
             ddfsd.setName(pszNewName: subfieldName)
             paoSubfieldDefns.append(ddfsd)
         }
         return true
-    }
-
-    /**
-     * Extract a substring terminated by a comma (or end of string).
-     * Commas in brackets are ignored as terminated with bracket
-     * nesting understood gracefully. If the returned string would
-     * being and end with a bracket then strip off the brackets.
-     * <P>
-     * Given a string like "(A,3(B,C),D),X,Y)" return "A,3(B,C),D".
-     * Give a string like "3A,2C" return "3A".
-     */
-    func extractSubstring(pszSrc: String) -> String {
-       var nBracket = 0;
-        var i: Int
-        var pszReturn: String
-
-        for (i = 0; i < pszSrc.count
-                && (nBracket > 0 || pszSrc.char(at: i) != ","); i++) {
-            if (pszSrc.char(at: i) == "(") {
-                nBracket++;
-            } else if (pszSrc.char(at: i) == ")") {
-                nBracket--;
-            }
-        }
-
-        if (pszSrc.char(at: 0) == "(") {
-            pszReturn = pszSrc.substring(1, i - 2);
-        } else {
-            pszReturn = pszSrc.substring(0, i);
-        }
-
-        return pszReturn;
     }
 
     /**
@@ -311,34 +275,29 @@ public class DDFFieldDefinition {
              * care to do (see 6.4.3.3 of the standard. We just strip
              * off the extra layer of brackets
              */
-            if ((iSrc == 0 || pszSrc.char(at: iSrc - 1) == ",")
-                    && pszSrc.char(at: iSrc) == "(") {
-                let pszContents = extractSubstring(pszSrc + iSrc);
+            if ((iSrc == 0 || pszSrc.char(at: iSrc - 1) == ",") && pszSrc.char(at: iSrc) == "(") {
+                let pszContents = pszSrc.substring(from: iSrc).extractSubstring()
                 let pszExpandedContents = expandFormat(pszSrc: pszContents);
 
                 szDest.append(pszExpandedContents)
-                iSrc = iSrc + pszContents.length() + 2;
+                iSrc = iSrc + pszContents.count + 2;
 
-            } else if ((iSrc == 0 || pszSrc.char(at: iSrc - 1) == ",") /*
-                                                                      * this
-                                                                      * is a
-                                                                      * repeated
-                                                                      * subclause
-                                                                      */
-                    && Character.isDigit(pszSrc.char(at: iSrc))) {
-
+            } else if (iSrc == 0 || pszSrc.char(at: iSrc - 1) == ",") && pszSrc.char(at: iSrc).isNumber { // isDigit
+                // this is a repeated subclause
                let orig_iSrc = iSrc;
 
                 // skip over repeat count.
-                for (; Character.isDigit(pszSrc.char(at: iSrc)); iSrc++) {
+                while pszSrc.char(at: iSrc).isNumber {
+                    iSrc += 1
                 }
+                
                 let nRepeatString = pszSrc.substring(orig_iSrc, iSrc);
-                nRepeat = Integer.parseInt(nRepeatString);
+                nRepeat = Int(nRepeatString)
 
-                let pszContents = extractSubstring(pszSrc.substring(iSrc));
-                let pszExpandedContents = expandFormat(pszContents);
+                let pszContents = pszSrc.substring(from: iSrc).extractSubstring()
+                let pszExpandedContents = expandFormat(pszSrc: pszContents);
 
-                for (int i = 0; i < nRepeat; i++) {
+                for i in 0..<nRepeat {
                     szDest.append(pszExpandedContents);
                     if (i < nRepeat - 1) {
                         szDest.append(",");
@@ -366,89 +325,70 @@ public class DDFFieldDefinition {
      * turn does final parsing of the subfield formats.
      */
     func applyFormats(_formatControls: String) -> Bool {
-        String pszFormatList;
-        Vector papszFormatItems;
+        var pszFormatList: String
+        var papszFormatItems = [String]()
 
         /* -------------------------------------------------------------------- */
         /* Verify that the format string is contained within brackets. */
         /* -------------------------------------------------------------------- */
-        if (_formatControls.length() < 2 || !_formatControls.startsWith("(")
-                || !_formatControls.endsWith(")")) {
-
-            Debug.error("DDFFieldDefinition: Format controls for " + pszTag
-                    + " field missing brackets {" + _formatControls
-                    + "} : length = " + _formatControls.length()
-                    + ", starts with {" + _formatControls.char(at: 0)
-                    + "}, ends with {"
-                    + _formatControls.char(at: _formatControls.length() - 1)
-                    + "}");
-
-            return false;
+        if _formatControls.count < 2 || !_formatControls.hasPrefix("(") || !_formatControls.hasSuffix(")") {
+            print("DDFFieldDefinition: Format controls for \(pszTag ?? "Unknown Tag") field missing brackets {\(_formatControls)} : length = \(_formatControls.count), starts with {\(_formatControls.char(at: 0))}, ends with {\(_formatControls.char(at: _formatControls.count - 1))}")
+            return false
         }
 
         /* -------------------------------------------------------------------- */
         /* Duplicate the string, and strip off the brackets. */
         /* -------------------------------------------------------------------- */
 
-        pszFormatList = expandFormat(_formatControls);
+        pszFormatList = expandFormat(pszSrc: _formatControls);
 
-        if (Debug.debugging("iso8211")) {
-            Debug.output("DDFFieldDefinition.applyFormats{" + _formatControls
-                    + "} expanded to {" + pszFormatList + "} ");
-        }
+        #if DEBUG
+        print("DDFFieldDefinition.applyFormats{" + _formatControls + "} expanded to {" + pszFormatList + "} ");
+        #endif
 
         /* -------------------------------------------------------------------- */
         /* Tokenize based on commas. */
         /* -------------------------------------------------------------------- */
-        papszFormatItems = PropUtils.parseMarkers(pszFormatList, ",");
+        let pszFormatListNoQuotes = pszFormatList.replacingOccurrences(of: "\"", with: "\0")
+        papszFormatItems = pszFormatListNoQuotes.components(separatedBy: ",")
+        //papszFormatItems = PropUtils.parseMarkers(pszFormatList, ",");
 
         /* -------------------------------------------------------------------- */
         /* Apply the format items to subfields. */
         /* -------------------------------------------------------------------- */
 
-       IntiFormatItem = 0;
-        for (Iterator it = papszFormatItems.iterator(); it.hasNext(); iFormatItem++) {
-
-            String pszPastPrefix = (String) it.next();
-
-           IntpppIndex = 0;
+        var iFormatItem = 0
+        for item in papszFormatItems {
+            
+            var pszPastPrefix = item
+            var pppIndex = 0
             // Skip over digits...
-            for (; Character.isDigit(pszPastPrefix.char(at: pppIndex)); pppIndex++) {
+            while pszPastPrefix.char(at: pppIndex).isNumber {
+                pppIndex += 1
             }
-            pszPastPrefix = pszPastPrefix.substring(pppIndex);
-
-            ///////////////////////////////////////////////////////////////
-            // Did we get too many formats for the subfields created
-            // by names? This may be legal by the 8211 specification,
-            // but
-            // isn't encountered in any formats we care about so we
-            // just
-            // blow.
-
-            if (iFormatItem > paoSubfieldDefns.size()) {
-                Debug.error("DDFFieldDefinition: Got more formats than subfields for field "
-                        + pszTag);
-                break;
+            pszPastPrefix = pszPastPrefix.substring(from: pppIndex)
+            
+            // Did we get too many formats for the subfields created by names?
+            // This may be legal by the 8211 specification, but isn't encountered in
+            // any formats we care about so we just blow.
+            
+            if iFormatItem > paoSubfieldDefns.count {
+                print("DDFFieldDefinition: Got more formats than subfields for fied \(pszTag ?? "Unknown Tag")")
+                break
             }
-
-            if (!((DDFSubfieldDefinition) paoSubfieldDefns.elementAt(iFormatItem)).setFormat(pszPastPrefix)) {
-                Debug.output("DDFFieldDefinition had problem setting format for "
-                        + pszPastPrefix);
-                return false;
+            
+            if !paoSubfieldDefns[iFormatItem].setFormat(pszFormat: pszPastPrefix) {
+                print("DDFFieldDefinition had problem setting format for \(pszPastPrefix)")
+                return false
             }
         }
-
+        
         /* -------------------------------------------------------------------- */
         /* Verify that we got enough formats, cleanup and return. */
         /* -------------------------------------------------------------------- */
-        if (iFormatItem < paoSubfieldDefns.size()) {
-            Debug.error("DDFFieldDefinition: Got fewer formats than subfields for field "
-                    + pszTag
-                    + " got ("
-                    + iFormatItem
-                    + ", should have "
-                    + paoSubfieldDefns.size() + ")");
-            return false;
+        if iFormatItem < paoSubfieldDefns.count {
+            print("DDFFieldDefinition: Got fewer formats than subfields for field \(pszTag ?? "Unknown Tag") got (\(iFormatItem), should have \(paoSubfieldDefns.count))")
+            return false
         }
 
         /* -------------------------------------------------------------------- */
@@ -540,9 +480,9 @@ public class DDFFieldDefinition {
                 return ELEMENTARY
             }
 
-            if (Debug.debugging("iso8211")) {
-                Debug.output("DDFFieldDefinition tested for unknown code: " + c);
-            }
+            #if DEBUG
+            print("DDFFieldDefinition tested for unknown code: \(c)")
+            #endif
             return ELEMENTARY
         }
     }
@@ -595,10 +535,9 @@ public class DDFFieldDefinition {
                 return CHAR_STRING
             }
 
-            if (Debug.debugging("iso8211")) {
-                Debug.output("DDFFieldDefinition tested for unknown data type code: "
-                        + c);
-            }
+            #if DEBUG
+            print("DDFFieldDefinition tested for unknown data type code: \(c)")
+            #endif
             return CHAR_STRING
         }
     }

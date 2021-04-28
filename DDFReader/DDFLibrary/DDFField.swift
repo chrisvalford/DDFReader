@@ -19,7 +19,7 @@ import Foundation
 public class DDFField {
 
     var poDefn: DDFFieldDefinition
-    var pachData: [UInt8]
+    var pachData: [UInt8]?
     var subfields: Hashtable
     var dataPosition: Int
     var dataLength: Int
@@ -33,12 +33,12 @@ public class DDFField {
         dataLength = dataLengthIn;
     }
 
-    public init(poDefnIn: DDFFieldDefinition, pachDataIn: [byte]) {
-        this(poDefnIn, pachDataIn, true);
+    public convenience init(poDefnIn: DDFFieldDefinition, pachDataIn: [byte]) {
+        self.init(poDefnIn: poDefnIn, pachDataIn: pachDataIn, doSubfields: true)
     }
 
     public init(poDefnIn: DDFFieldDefinition, pachDataIn: [byte], doSubfields: Bool) {
-        initialize(poDefnIn, pachDataIn);
+        initialize(poDefnIn: poDefnIn, pachDataIn: pachDataIn);
         if (doSubfields) {
             buildSubfields();
         }
@@ -75,7 +75,7 @@ public class DDFField {
      * doesn't make sense to load the data.
      */
     public func getData() -> [byte] {
-        return pachData;
+        return pachData!
     }
 
     /**
@@ -84,7 +84,7 @@ public class DDFField {
      */
     public func getDataSize() -> Int {
         if (pachData != nil) {
-            return pachData.count
+            return pachData!.count
         } else {
             return 0
         }
@@ -135,29 +135,29 @@ public class DDFField {
         buf.append("\n");
         let size = getDataSize();
         buf.append("\tDataSize = ")
-        buf.append(size)
+        buf.append("\(size)")
         buf.append("\n");
 
         if (pachData == nil) {
             buf.append("\tHeader offset = ")
-            buf.append(headerOffset)
+            buf.append("\(headerOffset)")
             buf.append("\n");
             buf.append("\tData position = ")
-            buf.append(dataPosition)
+            buf.append("\(dataPosition)")
             buf.append("\n");
             buf.append("\tData length = ")
-            buf.append(dataLength)
+            buf.append("\(dataLength)")
             buf.append("\n");
             return buf
         }
 
         buf.append("\tData = ");
-        for (int i = 0; i < Math.min(size, 40); i++) {
-            if (pachData[i] < 32 || pachData[i] > 126) {
+        for i in 0..<min(size, 40) {
+            if pachData![i] < 32 || pachData![i] > 126 {
                 buf.append(" | ")
-                buf.append(pachData[i])
+                buf.append(Character(UnicodeScalar(pachData![i])))
             } else {
-                buf.append(pachData[i])
+                buf.append(Character(UnicodeScalar(pachData![i])))
             }
         }
 
@@ -169,53 +169,52 @@ public class DDFField {
         /* -------------------------------------------------------------------- */
         /* dump the data of the subfields. */
         /* -------------------------------------------------------------------- */
-        if (Debug.debugging("iso8211.raw")) {
-           IntiOffset = 0;
-            MutableInt nBytesConsumed = new MutableInt(0);
-
-            for (int nLoopCount = 0; nLoopCount < getRepeatCount(); nLoopCount++) {
-                if (nLoopCount > 8) {
-                    buf.append("      ...\n");
-                    break;
-                }
-
-                for (int i = 0; i < poDefn.getSubfieldCount(); i++) {
-                    [byte] subPachData = new byte[pachData.length - iOffset];
-                    System.arraycopy(pachData,
-                            iOffset,
-                            subPachData,
-                            0,
-                            subPachData.length);
-
-                    buf.append(poDefn.getSubfieldDefn(i).dumpData(subPachData,
-                            subPachData.length));
-
-                    poDefn.getSubfieldDefn(i).getDataLength(subPachData,
-                            subPachData.length,
-                            nBytesConsumed);
-                    iOffset += nBytesConsumed.value;
-                }
+        #if DEBUG
+        var iOffset = 0;
+        var nBytesConsumed: Int? //= 0
+        
+        for nLoopCount in 0..<getRepeatCount() {
+            if (nLoopCount > 8) {
+                buf.append("      ...\n");
+                break;
             }
-        } else {
-            buf.append("      Subfields:\n");
-
-            for (Enumeration enumeration = subfields.keys(); enumeration.hasMoreElements();) {
-                Object obj = subfields.get(enumeration.nextElement());
-
-                if (obj instanceof List) {
-                    for (Iterator it = ((List) obj).iterator(); it.hasNext();) {
-                        let ddfs = (DDFSubfield) it.next() // DDFSubfield
-                        buf.append("        ")
-                        buf.append(ddfs.toString())
-                        buf.append("\n");
-                    }
-                } else {
-                    buf.append("        ")
-                    buf.append(obj.toString())
-                    buf.append("\n");
-                }
+            
+            for i in 0..<poDefn.getSubfieldCount() {
+                var subPachData = [byte]() // byte[pachData.length - iOffset];
+                DDFUtils.arraycopy(source: pachData!,
+                                   sourceStart: iOffset,
+                                   destination: &subPachData,
+                                   destinationStart: 0,
+                                   count: subPachData.count)
+                
+                buf.append(poDefn.getSubfieldDefn(i: i)!.dumpData(pachData: subPachData,
+                                                                   nMaxBytes: subPachData.count))
+                
+                poDefn.getSubfieldDefn(i: i)!.getDataLength(pachSourceData: subPachData,
+                                                           nMaxBytes: subPachData.count,
+                                                           pnConsumedBytes: &nBytesConsumed);
+                iOffset += nBytesConsumed!
             }
         }
+        #else
+        buf.append("      Subfields:\n");
+        for (Enumeration enumeration = subfields.keys(); enumeration.hasMoreElements();) {
+            var obj: AnyObject? = subfields.get(enumeration.nextElement())
+            
+            if obj is List {
+                for (Iterator it = ((List) obj).iterator(); it.hasNext();) {
+                    let ddfs = (DDFSubfield) it.next() // DDFSubfield
+                    buf.append("        ")
+                    buf.append(ddfs.toString())
+                    buf.append("\n");
+                }
+            } else {
+                buf.append("        ")
+                buf.append(obj.toString())
+                buf.append("\n");
+            }
+        }
+        #endif
         return buf
     }
 
@@ -225,16 +224,15 @@ public class DDFField {
      * object. Will return nil if the subfield doesn't exist.
      */
     public func getSubfields(subfieldName: String) -> List<DDFSubfield>? {
-        Object obj = subfields.get(subfieldName);
-        if (obj instanceof List) {
-            return (List) obj;
-        } else if (obj != nil) {
-            LinkedList ll = new LinkedList();
-            ll.add(obj);
-            return ll;
+        var obj: AnyObject? = subfields.get(subfieldName)
+        if obj is List {
+            return obj as? List
+        } else if obj != nil {
+            var ll =  List()
+            ll.add(obj)
+            return ll
         }
-
-        return nil;
+        return nil
     }
 
     /**
@@ -243,18 +241,18 @@ public class DDFField {
      * nil if the subfield doesn't exist.
      */
     public func getSubfield(subfieldName: String) -> DDFSubfield {
-        Object obj = subfields.get(subfieldName);
-        if (obj instanceof List) {
-            List l = (List) obj;
-            if (!l.isEmpty()) {
-                return (DDFSubfield) (l.get(0));
+        var obj: AnyObject? = subfields.get(subfieldName)
+        if obj is List {
+            var l = obj as! List
+            if l.isEmpty() == false {
+                return l.get(0) as! DDFSubfield
             }
-            obj = nil;
+            obj = nil
         }
 
         // May be nil if subfield list above is empty. Not sure if
         // that's possible.
-        return (DDFSubfield) obj;
+        return obj as! DDFSubfield
     }
 
     /**
@@ -282,7 +280,7 @@ public class DDFField {
      *         returned pointer should not be freed by the
      *         application.
      */
-    public func getSubfieldData(poSFDefn: DDFSubfieldDefinition?, pnMaxBytes: inout Int, iSubfieldIndex: inout Int) -> [byte]? {
+    public func getSubfieldData(poSFDefn: DDFSubfieldDefinition?, pnMaxBytes: inout Int?, iSubfieldIndex: inout Int) -> [byte]? {
        var iOffset = 0;
 
         if (poSFDefn == nil) {
@@ -294,28 +292,26 @@ public class DDFField {
             iSubfieldIndex = 0;
         }
 
-        var nBytesConsumed = 0
+        var nBytesConsumed: Int? //= 0
         while (iSubfieldIndex >= 0) {
             for iSF in 0..<poDefn.getSubfieldCount() {
-                let poThisSFDefn = poDefn.getSubfieldDefn(iSF) // DDFSubfieldDefinition
+                let poThisSFDefn = poDefn.getSubfieldDefn(i: iSF) // DDFSubfieldDefinition
 
                 var subPachData = [byte]() //byte[pachData.length - iOffset];
-                System.arraycopy(pachData,
-                        iOffset,
-                        subPachData,
-                        0,
-                        subPachData.length);
+                DDFUtils.arraycopy(source: pachData!,
+                                   sourceStart: iOffset,
+                                   destination: &subPachData,
+                                   destinationStart: 0,
+                                   count: subPachData.count)
 
                 if (poThisSFDefn == poSFDefn && iSubfieldIndex == 0) {
                     if (pnMaxBytes != nil) {
-                        pnMaxBytes.value = pachData.length - iOffset;
+                        pnMaxBytes = pachData!.count - iOffset
                     }
-                    return subPachData;
+                    return subPachData
                 }
-                poThisSFDefn.getDataLength(subPachData,
-                        subPachData.length,
-                        nBytesConsumed);
-                iOffset += nBytesConsumed.value;
+                poThisSFDefn?.getDataLength(pachSourceData: subPachData, nMaxBytes: subPachData.count, pnConsumedBytes: &nBytesConsumed)
+                iOffset += nBytesConsumed!
             }
 
             iSubfieldIndex -= 1
@@ -326,8 +322,8 @@ public class DDFField {
     }
 
     public func buildSubfields() {
-        let pachFieldData = pachData // [byte]
-       var nBytesRemaining = pachData.count
+        var pachFieldData = pachData! // [byte]
+        var nBytesRemaining: Int = pachData!.count
 
         for iRepeat in 0..<getRepeatCount() {
 
@@ -337,19 +333,19 @@ public class DDFField {
             /* -------------------------------------------------------- */
             for iSF in 0..<poDefn.getSubfieldCount() {
 
-                let ddfs = DDFSubfield(poDefn.getSubfieldDefn(iSF), pachFieldData, nBytesRemaining)
+                let ddfs = DDFSubfield(poSFDefn: poDefn.getSubfieldDefn(i: iSF)!, pachFieldData: pachFieldData, nBytesRemaining: nBytesRemaining)
 
-                addSubfield(ddfs);
+                addSubfield(ddfs: ddfs);
 
                 // Reset data for next subfield;
                var nBytesConsumed = ddfs.getByteSize()
                 nBytesRemaining -= nBytesConsumed
                 var tempData = [byte] () //byte[pachFieldData.length - nBytesConsumed];
-                System.arraycopy(pachFieldData,
-                        nBytesConsumed,
-                        tempData,
-                        0,
-                        tempData.length);
+                DDFUtils.arraycopy(source: pachFieldData,
+                                   sourceStart: nBytesConsumed,
+                                   destination: &tempData,
+                                   destinationStart: 0,
+                                   count: tempData.count)
                 pachFieldData = tempData;
             }
         }
@@ -357,23 +353,22 @@ public class DDFField {
     }
 
     func addSubfield(ddfs: DDFSubfield) {
-        if (Debug.debugging("iso8211")) {
-            Debug.output("DDFField(" + getFieldDefn().getName()
-                    + ").addSubfield(" + ddfs + ")");
-        }
+        #if DEBUG
+        print("DDFField(\(getFieldDefn().getName())).addSubfield(\(ddfs))")
+        #endif
 
-        String sfName = ddfs.getDefn().getName().trim().intern();
-        Object sf = subfields.get(sfName);
-        if (sf == nil) {
-            subfields.put(sfName, ddfs);
+        let sfName = ddfs.getDefn().getName().trimmingCharacters(in: .whitespaces) //.intern()
+        var sf = subfields.get(sfName)
+        if sf == nil {
+            subfields.put(sfName, ddfs)
         } else {
-            if (sf instanceof List) {
-                ((List) sf).add(ddfs);
+            if (sf is List) {
+                (sf as! List).add(ddfs)
             } else {
-                Vector subList = new Vector();
-                subList.add(sf);
-                subList.add(ddfs);
-                subfields.put(sfName, subList);
+                var subList = [List]()
+                subList.add(sf)
+                subList.add(ddfs)
+                subfields.put(sfName, subList)
             }
         }
     }
@@ -396,7 +391,7 @@ public class DDFField {
         /* field's list of subfields can fit into the data space. */
         /* -------------------------------------------------------------------- */
         if (poDefn.getFixedWidth() != 0) {
-            return pachData.length / poDefn.getFixedWidth();
+            return pachData!.count / poDefn.getFixedWidth()
         }
 
         /* -------------------------------------------------------------------- */
@@ -413,36 +408,33 @@ public class DDFField {
         /* -------------------------------------------------------------------- */
        var iOffset = 0;
        var iRepeatCount = 1;
-       var nBytesConsumed = 0
+        var nBytesConsumed: Int? //= 0
 
         while (true) {
             for iSF in 0..<poDefn.getSubfieldCount() {
-                let poThisSFDefn = poDefn.getSubfieldDefn(iSF) // DDFSubfieldDefinition
+                let poThisSFDefn = poDefn.getSubfieldDefn(i: iSF) // DDFSubfieldDefinition
 
-                if poThisSFDefn.getWidth() > pachData.length - iOffset {
-                    nBytesConsumed.value = poThisSFDefn.getWidth();
+                if poThisSFDefn!.getWidth() > pachData!.count - iOffset {
+                    nBytesConsumed = poThisSFDefn!.getWidth()
                 } else {
                     var tempData = [byte]() //byte[pachData.length - iOffset];
-                    System.arraycopy(pachData,
-                            iOffset,
-                            tempData,
-                            0,
-                            tempData.length);
-                    poThisSFDefn.getDataLength(tempData,
-                            tempData.length,
-                            nBytesConsumed);
+                    DDFUtils.arraycopy(source: pachData!,
+                                       sourceStart: iOffset,
+                                       destination: &tempData,
+                                       destinationStart: 0,
+                                       count: tempData.count)
+                    poThisSFDefn?.getDataLength(pachSourceData: tempData,
+                                               nMaxBytes: tempData.count,
+                                               pnConsumedBytes: &nBytesConsumed)
                 }
-
-                iOffset += nBytesConsumed.value;
-                if iOffset > pachData.length {
-                    return iRepeatCount - 1;
+                iOffset += nBytesConsumed!
+                if iOffset > pachData!.count {
+                    return iRepeatCount - 1
                 }
             }
-
-            if iOffset > pachData.count - 2 {
+            if iOffset > pachData!.count - 2 {
                 return iRepeatCount
             }
-
             iRepeatCount += 1
         }
     }

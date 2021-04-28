@@ -44,44 +44,43 @@ public class DDFSubfield {
      */
     public init(poSFDefn: DDFSubfieldDefinition, pachFieldData: [byte], nBytesRemaining: Int) {
         defn = poSFDefn;
-        var nBytesConsumed: Int
+        var nBytesConsumed: Int?
         let ddfdt: DDFDataType = poSFDefn.getType();
 
         if (ddfdt == DDFDataType.DDFInt) {
-            setValue(Integer(defn.extractIntData(pachFieldData,
-                    nBytesRemaining,
-                    nBytesConsumed)));
+            setValue(o: defn!.extractIntData(pachSourceData: pachFieldData,
+                                             nMaxBytes: nBytesRemaining,
+                                             pnConsumedBytes: &nBytesConsumed))
         } else if (ddfdt == DDFDataType.DDFFloat) {
-            setValue(Double(defn.extractFloatData(pachFieldData,
-                    nBytesRemaining,
-                    nBytesConsumed)));
-        } else if (ddfdt == DDFDataType.DDFString
-                || ddfdt == DDFDataType.DDFBinaryString) {
-            setValue(defn.extractStringData(pachFieldData,
-                    nBytesRemaining,
-                    nBytesConsumed));
+            setValue(o: defn!.extractFloatData(pachSourceData: pachFieldData,
+                                           nMaxBytes: nBytesRemaining,
+                                           pnConsumedBytes: &nBytesConsumed))
+        } else if (ddfdt == DDFDataType.DDFString || ddfdt == DDFDataType.DDFBinaryString) {
+            setValue(o: defn!.extractStringData(pachSourceData: pachFieldData,
+                                            nMaxBytes: nBytesRemaining,
+                                            pnConsumedBytes: &nBytesConsumed));
         }
 
-        byteSize = nBytesConsumed
+        byteSize = nBytesConsumed!
     }
 
     public func getByteSize() -> Int {
-        return byteSize;
+        return byteSize
     }
 
     public func setDefn(ddsfd: DDFSubfieldDefinition) {
-        defn = ddsfd;
+        defn = ddsfd
     }
 
     public func getDefn() -> DDFSubfieldDefinition {
-        return defn;
+        return defn!
     }
 
     /**
      * Set the value of the subfield.
      */
     public func setValue(o: AnyObject) {
-        value = o;
+        value = o
     }
 
     /**
@@ -129,7 +128,7 @@ public class DDFSubfield {
      */
     public func toString() -> String {
         if defn != nil {
-            return "\(defn.getName()) = \(value)"
+            return "\(defn!.getName()) = \(String(describing: value))"
         }
         return ""
     }

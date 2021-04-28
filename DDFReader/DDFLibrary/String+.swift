@@ -40,6 +40,52 @@ extension String {
     func equalsIgnoreCase(_ b: String) -> Bool {
         return self.caseInsensitiveCompare(b) == .orderedSame
     }
+    
+
+    // Extract a substring terminated by a comma (or end of string).
+    // Commas in brackets are ignored as terminated with bracket
+    // nesting understood gracefully. If the returned string would
+    // being and end with a bracket then strip off the brackets.
+    // Given a string like "(A,3(B,C),D),X,Y)" return "A,3(B,C),D".
+    // Give a string like "3A,2C" return "3A".
+    func extractSubstring() -> String
+    {
+        var returnArray = [Character]()
+
+        // Keep a count of the opening and closing brackets
+        var bracketCount = 0
+        let characters = Array(self)
+
+        for c in characters {
+            if c == "\0" { break }
+
+            else if c == "," {
+                if bracketCount == 0 {
+                    break
+                }
+                returnArray.append(c)
+            }
+
+            else if c == "(" {
+                bracketCount += 1
+                if bracketCount > 1 {
+                    returnArray.append(c)
+                }
+            }
+            else if c == ")" {
+                if bracketCount > 1 {
+                    returnArray.append(c)
+                }
+                bracketCount -= 1
+            }
+
+            else {
+                returnArray.append(c)
+            }
+        }
+
+        return String(returnArray)
+    }
 }
 /*
 let str = "Hello, playground"
@@ -47,4 +93,8 @@ print(str.substring(from: 7))         // playground
 print(str.substring(to: 5))           // Hello
 print(str.substring(with: 7..<11))    // play
 print(str.char(at: 7))
+ 
+ let ss1 = "(A,3(B,C),D),X,Y)".extractSubstring()
+ let tt1 = "3A,2C".extractSubstring()
 */
+
