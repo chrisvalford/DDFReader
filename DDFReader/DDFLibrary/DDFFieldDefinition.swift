@@ -276,12 +276,11 @@ public class DDFFieldDefinition {
         var i: Int
         var pszReturn: String
 
-        for (i = 0; i < pszSrc.count
-                && (nBracket > 0 || pszSrc.char(at: i) != ","); i++) {
+        for (i = 0; i < pszSrc.count && (nBracket > 0 || pszSrc.char(at: i) != ","); i++) {
             if (pszSrc.char(at: i) == "(") {
-                nBracket++;
+                nBracket += 1
             } else if (pszSrc.char(at: i) == ")") {
-                nBracket--;
+                nBracket -= 1
             }
         }
 
