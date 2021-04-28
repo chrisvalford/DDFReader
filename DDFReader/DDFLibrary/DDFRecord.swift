@@ -328,6 +328,7 @@ public class DDFRecord {
                                    count: tempData.count)
 
                 ddff = DDFField(poDefnIn: poFieldDefn!, pachDataIn: tempData, doSubfields: readSubfields)
+
             } else {
                 // Save the info for reading later directly out of the field.
                 ddff = DDFField(poDefnIn: poFieldDefn!, dataPositionIn: nFieldPos, dataLengthIn: nFieldLength)
@@ -460,7 +461,7 @@ public class DDFRecord {
         /* -------------------------------------------------------------------- */
         /* Fetch the field. If this fails, return zero. */
         /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)
+        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!
         if (poField == nil) {
             return 0;
         }
@@ -508,7 +509,7 @@ public class DDFRecord {
         /* -------------------------------------------------------------------- */
         /* Fetch the field. If this fails, return zero. */
         /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex);
+        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!;
         if (poField == nil) {
             return nil;
         }

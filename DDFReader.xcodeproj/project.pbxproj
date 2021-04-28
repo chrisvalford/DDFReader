@@ -156,8 +156,8 @@
 		2F9BFBA42637F40E0000CB91 /* DDFLibrary */ = {
 			isa = PBXGroup;
 			children = (
-				2F9BFBA52637F4270000CB91 /* DDFDataType.swift */,
 				2F9BFBA72637F4EE0000CB91 /* DDFConstants.swift */,
+				2F9BFBA52637F4270000CB91 /* DDFDataType.swift */,
 				2F9BFBA92637F5540000CB91 /* DDFField.swift */,
 				2F9BFBAB2637F5940000CB91 /* DDFFieldDefinition.swift */,
 				2F9BFBAD2637F5B70000CB91 /* DDFModule.swift */,

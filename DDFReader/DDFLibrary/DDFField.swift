@@ -38,7 +38,7 @@ public class DDFField {
     }
 
     public init(poDefnIn: DDFFieldDefinition, pachDataIn: [byte], doSubfields: Bool) {
-        initialize(poDefnIn: poDefnIn, pachDataIn: pachDataIn);
+        initialize(poDefnIn: poDefnIn, pachDataIn: pachDataIn)
         if (doSubfields) {
             buildSubfields();
         }

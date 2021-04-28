@@ -126,7 +126,7 @@ public class DDFSubfield {
      * Return a string 'key = value', describing the field and its
      * value.
      */
-    public func toString() -> String {
+    public func toString() -> String{
         if defn != nil {
             return "\(defn!.getName()) = \(String(describing: value))"
         }

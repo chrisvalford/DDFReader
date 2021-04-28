@@ -260,6 +260,37 @@ public class DDFFieldDefinition {
     }
 
     /**
+     * Extract a substring terminated by a comma (or end of string).
+     * Commas in brackets are ignored as terminated with bracket
+     * nesting understood gracefully. If the returned string would
+     * being and end with a bracket then strip off the brackets.
+     * <P>
+     * Given a string like "(A,3(B,C),D),X,Y)" return "A,3(B,C),D".
+     * Give a string like "3A,2C" return "3A".
+     */
+    func extractSubstring(pszSrc: String) -> String {
+       var nBracket = 0;
+        var i: Int
+        var pszReturn: String
+
+        for (i = 0; i < pszSrc.count && (nBracket > 0 || pszSrc.char(at: i) != ","); i++) {
+            if (pszSrc.char(at: i) == "(") {
+                nBracket += 1
+            } else if (pszSrc.char(at: i) == ")") {
+                nBracket -= 1
+            }
+        }
+
+        if (pszSrc.char(at: 0) == "(") {
+            pszReturn = pszSrc.substring(1, i - 2);
+        } else {
+            pszReturn = pszSrc.substring(0, i);
+        }
+
+        return pszReturn;
+    }
+
+    /**
      * Given a string that contains a coded size symbol, expand it
      * out.
      */
@@ -304,7 +335,7 @@ public class DDFFieldDefinition {
                     }
                 }
 
-                if (iSrc == "(") {
+                if iSrc == "(" {
                     iSrc += pszContents.count + 2;
                 } else {
                     iSrc += pszContents.count
@@ -356,6 +387,11 @@ public class DDFFieldDefinition {
         /* -------------------------------------------------------------------- */
         /* Apply the format items to subfields. */
         /* -------------------------------------------------------------------- */
+
+       var iFormatItem = 0
+        for (Iterator it = papszFormatItems.iterator(); it.hasNext(); iFormatItem++) {
+
+            let pszPastPrefix: String = it.next();
 
         var iFormatItem = 0
         for item in papszFormatItems {
