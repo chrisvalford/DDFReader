@@ -45,7 +45,7 @@ public class DDFSubfield {
     public init(poSFDefn: DDFSubfieldDefinition, pachFieldData: [byte], nBytesRemaining: Int) {
         defn = poSFDefn;
         var nBytesConsumed: Int?
-        let ddfdt: DDFDataType = poSFDefn.getType();
+        let ddfdt: DDFDataType = poSFDefn.dataType
 
         if (ddfdt == DDFDataType.DDFInt) {
             setValue(o: defn!.extractIntData(pachSourceData: pachFieldData,

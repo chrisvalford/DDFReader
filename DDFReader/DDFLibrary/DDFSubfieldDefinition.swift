@@ -18,9 +18,12 @@ import Foundation
  */
 public class DDFSubfieldDefinition {
     
-    var pszName: String? // a.k.a. subfield mnemonic
+    var name: String {
+        didSet { name = name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
     var pszFormatString: String
-    var eType: DDFDataType
+    private (set) var dataType: DDFDataType
     var eBinaryFormat: DDFBinaryFormat
     
     /**
@@ -45,43 +48,18 @@ public class DDFSubfieldDefinition {
         return nFormatWidth;
     }
     
-    /** Get pointer to subfield name. */
-    public func getName() -> String {
-        return pszName!
-    }
-    
     /** Get pointer to subfield format string */
     public func getFormat() -> String {
         return pszFormatString;
     }
     
-    /**
-     * Get the general type of the subfield. This can be used to determine which
-     * of ExtractFloatData(), ExtractIntData() or ExtractStringData() should be
-     * used.
-     *
-     * @return The subfield type. One of DDFInt, DDFFloat, DDFString or
-     *         DDFBinaryString.
-     */
-    public func getType() -> DDFDataType {
-        return eType;
-    }
-    
     public init() {
-        pszName = nil;
         bIsVariable = true;
         nFormatWidth = 0;
         chFormatDelimeter = DDF_UNIT_TERMINATOR;
         eBinaryFormat = DDFBinaryFormat.NotBinary;
-        eType = DDFDataType.DDFString;
+        dataType = DDFDataType.DDFString;
         pszFormatString = ""
-    }
-    
-    /**
-     * Set the name of the subfield.
-     */
-    public func setName(pszNewName: String) {
-        pszName = pszNewName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     /**
@@ -125,13 +103,13 @@ public class DDFSubfieldDefinition {
         switch (pszFormatString.char(at: 0)) {
         
         case "A", "C": // It isn't clear to me how this is different than 'A'
-            eType = DDFDataType.DDFString
+            dataType = .DDFString
             
         case "R":
-            eType = DDFDataType.DDFFloat;
+            dataType = .DDFFloat;
             
         case "I", "S":
-            eType = DDFDataType.DDFInt;
+            dataType = .DDFInt;
             
         case "B", "b":
             // Is the width expressed in bits? (is it a bitstring)
@@ -152,12 +130,12 @@ public class DDFSubfieldDefinition {
                 }
                 
                 nFormatWidth = Int(numberString) / 8
-                eBinaryFormat = DDFBinaryFormat.SInt // good default, works for SDTS.
+                eBinaryFormat = .SInt // good default, works for SDTS.
                 
                 if (nFormatWidth < 5) {
-                    eType = DDFDataType.DDFInt;
+                    dataType = .DDFInt;
                 } else {
-                    eType = DDFDataType.DDFBinaryString;
+                    dataType = .DDFBinaryString;
                 }
                 
             } else { // or do we have a binary type indicator? (is it binary)
@@ -171,9 +149,9 @@ public class DDFSubfieldDefinition {
                 nFormatWidth = Int(pszFormatString.substring(2,numEndIndex))
                 
                 if (eBinaryFormat == DDFBinaryFormat.SInt || eBinaryFormat == DDFBinaryFormat.UInt) {
-                    eType = DDFDataType.DDFInt;
+                    dataType = DDFDataType.DDFInt;
                 } else {
-                    eType = DDFDataType.DDFFloat;
+                    dataType = DDFDataType.DDFFloat;
                 }
             }
             
@@ -200,7 +178,7 @@ public class DDFSubfieldDefinition {
     public func toString() -> String {
         var sb = "    DDFSubfieldDefn:\n"
         sb.append("        Label = ")
-        sb.append(pszName!)
+        sb.append(name)
         sb.append("\n")
         sb.append("        FormatString = ")
         sb.append(pszFormatString)
@@ -236,7 +214,7 @@ public class DDFSubfieldDefinition {
     public func getDataLength(pachSourceData: [byte], nMaxBytes: Int, pnConsumedBytes: inout Int?) -> Int {
         if bIsVariable == false {
             if nFormatWidth > nMaxBytes {
-                print("DDFSubfieldDefinition: Only \(nMaxBytes) bytes available for subfield  \(pszName ?? "Unknown") with format string \(pszFormatString) ... returning shortened data.")
+                print("DDFSubfieldDefinition: Only \(nMaxBytes) bytes available for subfield  \(name) with format string \(pszFormatString) ... returning shortened data.")
                 if pnConsumedBytes != nil {
                     pnConsumedBytes = nMaxBytes
                 }
@@ -320,8 +298,8 @@ public class DDFSubfieldDefinition {
             oldConsumed = pnConsumedBytes!
         }
         
-        var nLength = getDataLength(pachSourceData: pachSourceData, nMaxBytes: nMaxBytes, pnConsumedBytes: &pnConsumedBytes);
-        let ns = String(pachSourceData, 0, nLength);
+        let nLength = getDataLength(pachSourceData: pachSourceData, nMaxBytes: nMaxBytes, pnConsumedBytes: &pnConsumedBytes);
+        let ns = DDFUtils.string(from: pachSourceData, start: 0, length: nLength)!
         
         //if (Debug.debugging("iso8211detail") && pnConsumedBytes != nil) {
         #if DEBUG
@@ -573,27 +551,27 @@ public class DDFSubfieldDefinition {
      */
     public func dumpData(pachData: [byte], nMaxBytes: Int) -> String {
         var sb = ""
-        if (eType == DDFDataType.DDFFloat) {
+        if (dataType == DDFDataType.DDFFloat) {
             sb.append("      Subfield ")
-            sb.append(pszName!)
+            sb.append(name)
             sb.append("=")
             sb.append(extractFloatData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
-        } else if (eType == DDFDataType.DDFInt) {
+        } else if (dataType == DDFDataType.DDFInt) {
             sb.append("      Subfield ")
-            sb.append(pszName!)
+            sb.append(name)
             sb.append("=")
             sb.append(extractIntData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
-        } else if (eType == DDFDataType.DDFBinaryString) {
+        } else if (dataType == DDFDataType.DDFBinaryString) {
             sb.append("      Subfield ")
-            sb.append(pszName!)
+            sb.append(name)
             sb.append("=")
             sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");
         } else {
             sb.append("      Subfield ")
-            sb.append(pszName!)
+            sb.append(name)
             sb.append("=")
             sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
             sb.append("\n");

@@ -23,7 +23,7 @@ public class DDFRecord {
     var pachData: [byte]?
 
     var nFieldCount: Int
-    var paoFields: [DDFField]? // Vector of DDFFields
+    var ddfFields = [DDFField]()
 
     var bIsClone: Bool = false
 
@@ -34,7 +34,6 @@ public class DDFRecord {
         nDataSize = 0
         pachData = nil
         nFieldCount = 0
-        paoFields = nil
         bIsClone = false
     }
 
@@ -80,12 +79,10 @@ public class DDFRecord {
         buf.append("    DataSize = ")
         buf.append("\(nDataSize)")
         buf.append("\n");
-
-        if (paoFields != nil) {
-            for field in paoFields! {
-                buf.append(field.toString()) //DDFField
-            }
+        for field in ddfFields {
+            buf.append(field.toString()) //DDFField
         }
+
         return buf
     }
 
@@ -145,16 +142,11 @@ public class DDFRecord {
      * preparation for reading a new header.
      */
     public func clear() {
-        if (paoFields != nil) {
-            paoFields = nil;
-        }
-
-        paoFields = nil;
-        nFieldCount = 0;
-
-        pachData = nil;
-        nDataSize = 0;
-        nReuseHeader = false;
+        ddfFields.removeAll()
+        nFieldCount = 0
+        pachData?.removeAll()
+        nDataSize = 0
+        nReuseHeader = false
     }
 
     /**
@@ -279,7 +271,7 @@ public class DDFRecord {
         /* ==================================================================== */
         /* Allocate, and read field definitions. */
         /* ==================================================================== */
-        paoFields = [DDFField]() //Vector(nFieldCount);
+        ddfFields = [DDFField]() //Vector(nFieldCount);
 
         for i in 0..<nFieldCount {
             var szTag: String
@@ -300,7 +292,7 @@ public class DDFRecord {
             /* -------------------------------------------------------------------- */
             /* Find the corresponding field in the module directory. */
             /* -------------------------------------------------------------------- */
-            let poFieldDefn = poModule.findFieldDefn(pszFieldName: szTag) // DDFFieldDefinition
+            let poFieldDefn = poModule.findFieldDefn(fieldName: szTag) // DDFFieldDefinition
 
             if (poFieldDefn == nil) {
                 print("DDFRecord: Undefined field " + szTag + " encountered in data record.");
@@ -328,37 +320,35 @@ public class DDFRecord {
                 ddff = DDFField(poDefnIn: poFieldDefn!, dataPositionIn: nFieldPos, dataLengthIn: nFieldLength)
                 ddff.setHeaderOffset(headerOffsetIn: poModule._recLength + _fieldAreaStart)
             }
-            paoFields?.append(ddff)
+            ddfFields.append(ddff)
         }
 
         return true
     }
 
-    /**
-     * Find the named field within this record.
-     *
-     * @param pszName The name of the field to fetch. The comparison
-     *        is case insensitive.
-     * @param iFieldIndex The instance of this field to fetch. Use
-     *        zero (the default) for the first instance.
-     *
-     * @return Pointer to the requested DDFField. This pointer is to
-     *         an internal object, and should not be freed. It remains
-     *         valid until the next record read.
-     */
-    public func findField(pszName: String, iFieldIndex: inout Int) -> DDFField? {
-        if paoFields?.isEmpty == false {
-            for ddff in paoFields! {
-                if pszName.equalsIgnoreCase(ddff.getFieldDefn().getName()) {
-                    if (iFieldIndex == 0) {
-                        return ddff;
-                    } else {
-                        iFieldIndex -= 1
-                    }
-                }
+
+    /// Find the named field within this record.
+    ///
+    /// Parameter - pszName The name of the field to fetch. The comparison is case insensitive.
+    /// - Parameter iFieldIndex: The instance of this field to fetch. Use
+    ///        zero (the default) for the first instance.
+    ///
+    /// - Returns: Pointer to the requested DDFField. This pointer is to
+    ///         an internal object, and should not be freed. It remains
+    ///         valid until the next record read.
+    ///
+    public func findField(pszName: String) -> DDFField? {
+        guard ddfFields.isEmpty == false else { return nil }
+        
+        for ddfField in ddfFields {
+            if pszName.equalsIgnoreCase(ddfField.definition.name) {
+//                if (iFieldIndex == 0) {
+                    return ddfField;
+//                } else {
+//                    iFieldIndex -= 1
+//                }
             }
         }
-        return nil;
     }
 
     /**
@@ -371,21 +361,21 @@ public class DDFRecord {
      *         range.
      */
     public func getField(i: Int) -> DDFField? {
-        if i < 0 || i > paoFields!.count {
+        if i < 0 || i > ddfFields.count {
             return nil
         }
-        return paoFields?[i] // (DDFField)
+        return ddfFields[i] // (DDFField)
     }
 
     /**
      * Get an iterator over the fields.
      */
-    public func iterator() -> Iterator {
-        if (paoFields != nil) {
-            return paoFields.iterator();
-        }
-        return nil;
-    }
+//    public func iterator() -> Iterator {
+//        if (ddfFields != nil) {
+//            return ddfFields.iterator();
+//        }
+//        return nil;
+//    }
 
     /**
      * Fetch value of a subfield as an integer. This is a convenience
@@ -401,22 +391,15 @@ public class DDFRecord {
      * @return The value of the subfield, or zero if it failed for
      *         some reason.
      */
-    public func getIntSubfield(pszField: String, iFieldIndex: Int, pszSubfield: String, iSubfieldIndex: inout Int) -> Int{
-        var poField: DDFField
-
-        /* -------------------------------------------------------------------- */
-        /* Fetch the field. If this fails, return zero. */
-        /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!
-        if poField == nil {
-            return 0
-        }
+    public func getIntSubfield(pszField: String, iFieldIndex: Int, pszSubfield: String, iSubfieldIndex: inout Int) -> Int? {
+        
+        guard let poField = findField(pszName: pszField) else { return nil }
 
         /* -------------------------------------------------------------------- */
         /* Get the subfield definition */
         /* -------------------------------------------------------------------- */
 
-        let poSFDefn = poField.getFieldDefn().findSubfieldDefn(pszMnemonic: pszSubfield) // DDFSubfieldDefinition
+        let poSFDefn = poField.definition.findSubfieldDefinition(named: pszSubfield) // DDFSubfieldDefinition
         if (poSFDefn == nil) {
             return 0
         }
@@ -431,7 +414,7 @@ public class DDFRecord {
         /* Return the extracted value. */
         /* -------------------------------------------------------------------- */
 
-        return (poSFDefn?.extractIntData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil))!
+        return poSFDefn?.extractIntData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil)
     }
 
     /**
@@ -449,21 +432,14 @@ public class DDFRecord {
      * @return The value of the subfield, or zero if it failed for
      *         some reason.
      */
-    public func getFloatSubfield(pszField: String, iFieldIndex: Int, pszSubfield: String, iSubfieldIndex: Int) -> Double{
-        var poField: DDFField
-
-        /* -------------------------------------------------------------------- */
-        /* Fetch the field. If this fails, return zero. */
-        /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!
-        if (poField == nil) {
-            return 0;
-        }
+    public func getFloatSubfield(pszField: String, iFieldIndex: Int, pszSubfield: String, iSubfieldIndex: Int) -> Double? {
+        
+        guard let poField = findField(pszName: pszField) else { return nil }
 
         /* -------------------------------------------------------------------- */
         /* Get the subfield definition */
         /* -------------------------------------------------------------------- */
-        let poSFDefn = poField.getFieldDefn().findSubfieldDefn(pszMnemonic: pszSubfield) // DDFSubfieldDefinition
+        let poSFDefn = poField.definition.findSubfieldDefinition(named: pszSubfield)
         if (poSFDefn == nil) {
             return 0;
         }
@@ -477,7 +453,7 @@ public class DDFRecord {
         /* -------------------------------------------------------------------- */
         /* Return the extracted value. */
         /* -------------------------------------------------------------------- */
-        return poSFDefn!.extractFloatData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil);
+        return poSFDefn!.extractFloatData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil)
     }
 
     /**
@@ -498,20 +474,12 @@ public class DDFRecord {
 
     func getStringSubfield(pszField: String, iFieldIndex: Int, pszSubfield: String, iSubfieldIndex: Int) -> String? {
 
-        var poField: DDFField
-
-        /* -------------------------------------------------------------------- */
-        /* Fetch the field. If this fails, return zero. */
-        /* -------------------------------------------------------------------- */
-        poField = findField(pszName: pszField, iFieldIndex: iFieldIndex)!;
-        if (poField == nil) {
-            return nil;
-        }
+        guard let poField = findField(pszName: pszField) else { return nil }
 
         /* -------------------------------------------------------------------- */
         /* Get the subfield definition */
         /* -------------------------------------------------------------------- */
-        var poSFDefn = poField.getFieldDefn().findSubfieldDefn(pszMnemonic: pszSubfield) // DDFSubfieldDefinition
+        var poSFDefn = poField.definition.findSubfieldDefinition(named: pszSubfield) // DDFSubfieldDefinition
         if poSFDefn == nil {
             return nil
         }
@@ -519,7 +487,7 @@ public class DDFRecord {
         /* -------------------------------------------------------------------- */
         /* Get a pointer to the data. */
         /* -------------------------------------------------------------------- */
-        var nBytesRemaining: Int
+        var nBytesRemaining: Int?
 
         let pachData: [byte] = poField.getSubfieldData(poSFDefn: poSFDefn, pnMaxBytes: &nBytesRemaining, iSubfieldIndex: iSubfieldIndex)!;
 
@@ -527,7 +495,7 @@ public class DDFRecord {
         /* Return the extracted value. */
         /* -------------------------------------------------------------------- */
 
-        return poSFDefn!.extractStringData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil);
+        return poSFDefn!.extractStringData(pachSourceData: pachData, nMaxBytes: nBytesRemaining!, pnConsumedBytes: nil);
     }
 
 }

@@ -16,28 +16,19 @@ import Foundation
 public class DDFFieldDefinition {
 
     var poModule: DDFModule?
-    var pszTag: String?
+    private (set) var name: String
 
     var _fieldName: String?
     var _arrayDescr: String?
     var _formatControls: String?
 
-    var bRepeatingSubfields: Bool = false
+    var hasRepeatingSubfields: Bool = false
     var nFixedWidth: Int // zero if variable.
 
     var _data_struct_code: DataStructCode
     var _data_type_code: DataTypeCode
 
-    var paoSubfieldDefns = [DDFSubfieldDefinition]()
-
-    /**
-     * Fetch a pointer to the field name (tag).
-     *
-     * @return this is an internal copy and shouldn't be freed.
-     */
-    public func getName() -> String {
-        return pszTag!
-    }
+    private (set) var subfieldDefinitions = [DDFSubfieldDefinition]()
 
     /**
      * Fetch a longer descriptio of this field.
@@ -52,8 +43,8 @@ public class DDFFieldDefinition {
      * Get the number of subfields.
      */
     public func getSubfieldCount() -> Int {
-        if paoSubfieldDefns.isEmpty == false {
-            return paoSubfieldDefns.count
+        if subfieldDefinitions.isEmpty == false {
+            return subfieldDefinitions.count
         }
         return 0
     }
@@ -69,35 +60,19 @@ public class DDFFieldDefinition {
         return nFixedWidth;
     }
 
-    /**
-     * Fetch repeating flag.
-     *
-     * @return true if the field is marked as repeating.
-     */
-    public func isRepeating() -> Bool {
-        return bRepeatingSubfields;
-    }
-
-    /** this is just for an S-57 hack for swedish data */
-    public func setRepeating(val: Bool) {
-        bRepeatingSubfields = val;
-    }
-
     /** ********************************************************************* */
     /* DDFFieldDefn() */
     /** ********************************************************************* */
 
-    public init() {
+    init() {
         poModule = nil
-        pszTag = nil
         _fieldName = nil
         _arrayDescr = nil
         _formatControls = nil
     }
 
     public init(poModuleIn: DDFModule, pszTagIn: String, pachFieldArea: [byte]) {
-
-        initialize(poModuleIn: poModuleIn, pszTagIn: pszTagIn, pachFieldArea: pachFieldArea);
+        initialize(poModuleIn: poModuleIn, pszTagIn: pszTagIn, pachFieldArea: pachFieldArea)
     }
 
     /**
@@ -109,7 +84,7 @@ public class DDFFieldDefinition {
      * @param pachFieldArea the data bytes in the file representing
      *        the field from the header.
      */
-    public func initialize(poModuleIn: DDFModule, pszTagIn: String, pachFieldArea: [byte]) -> Bool {
+    public func initialize(poModuleIn: DDFModule, pszTagIn: String, pachFieldArea: [byte]) {
 
         /// pachFieldArea needs to be specified better. It's an
         /// offset into a character array, and we need to know what
@@ -119,13 +94,13 @@ public class DDFFieldDefinition {
        var iFDOffset = poModuleIn._fieldControlLength
 
         poModule = poModuleIn
-        pszTag = pszTagIn
+        name = pszTagIn
 
         /* -------------------------------------------------------------------- */
         /* Set the data struct and type codes. */
         /* -------------------------------------------------------------------- */
-        _data_struct_code = DataStructCode.get(pachFieldArea[0])
-        _data_type_code = DataTypeCode.get(pachFieldArea[1])
+        _data_struct_code = DataStructCode(Int(String(Character(UnicodeScalar(pachFieldArea[0]))))!)
+        _data_type_code = DataTypeCode(Int(String(Character(UnicodeScalar(pachFieldArea[1]))))!)
 
         #if DEBUG
             print("DDFFieldDefinition.initialize(\(pszTagIn)):\n\t\t data_struct_code = \(_data_struct_code)\n\t\t data_type_code = \(_data_type_code)\n\t\t iFDOffset = \(iFDOffset)")
@@ -185,17 +160,19 @@ public class DDFFieldDefinition {
         /* -------------------------------------------------------------------- */
         /* Parse the subfield info. */
         /* -------------------------------------------------------------------- */
-        if _data_struct_code != DataStructCode.ELEMENTARY {
-            if !buildSubfieldDefns(pszSublist: _arrayDescr) {
-                return false
+        if _data_struct_code != DataStructCode.elementary {
+            if !buildSubfieldDefns(pszSublist: _arrayDescr!) {
+                print("buildSubfieldDefns FAILED!")
+                //return false
             }
 
-            if !applyFormats(_formatControls: _formatControls) {
-                return false
+            if !applyFormats(_formatControls: _formatControls!) {
+                print("applyFormats FAILED")
+                //return false
             }
         }
 
-        return true;
+        //return true
     }
 
     /**
@@ -207,7 +184,7 @@ public class DDFFieldDefinition {
     public func toString() -> String {
         var buf = "  DDFFieldDefn:\n"
         buf.append("      Tag = ")
-        buf.append(pszTag!)
+        buf.append(name)
         buf.append("\n")
         buf.append("      _fieldName = ")
         buf.append(_fieldName!)
@@ -219,14 +196,14 @@ public class DDFFieldDefinition {
         buf.append(_formatControls!)
         buf.append("\n")
         buf.append("      _data_struct_code = ")
-        buf.append(_data_struct_code.toString())
+        buf.append("\(_data_struct_code)")
         buf.append("\n")
         buf.append("      _data_type_code = ")
         buf.append(_data_type_code.toString())
         buf.append("\n")
 
-        if paoSubfieldDefns.isEmpty == false {
-            for definition in paoSubfieldDefns {
+        if subfieldDefinitions.isEmpty == false {
+            for definition in subfieldDefinitions {
                 buf.append(definition.toString())
             }
         }
@@ -242,19 +219,19 @@ public class DDFFieldDefinition {
         var sublist = pszSublist
         
         if sublist.hasPrefix("*") {
-            bRepeatingSubfields = true
+            hasRepeatingSubfields = true
             sublist = sublist.substring(from: 1)
         }
 
         let sublistNoQuotes = sublist.replacingOccurrences(of: "\"", with: "\0")
         let papszSubfieldNames = sublistNoQuotes.components(separatedBy: "!")
 
-        paoSubfieldDefns = [DDFSubfieldDefinition]()
+        subfieldDefinitions = [DDFSubfieldDefinition]()
         
         for subfieldName in papszSubfieldNames {
             let ddfsd = DDFSubfieldDefinition()
-            ddfsd.setName(pszNewName: subfieldName)
-            paoSubfieldDefns.append(ddfsd)
+            ddfsd.name = subfieldName
+            subfieldDefinitions.append(ddfsd)
         }
         return true
     }
@@ -269,22 +246,22 @@ public class DDFFieldDefinition {
      * Give a string like "3A,2C" return "3A".
      */
     func extractSubstring(pszSrc: String) -> String {
-       var nBracket = 0;
-        var i: Int
+        var nBracket = 0;
         var pszReturn: String
-
-        for (i = 0; i < pszSrc.count && (nBracket > 0 || pszSrc.char(at: i) != ","); i++) {
+        var i = 0
+        while i < pszSrc.count && (nBracket > 0 || pszSrc.char(at: i) != ",") {
             if (pszSrc.char(at: i) == "(") {
                 nBracket += 1
             } else if (pszSrc.char(at: i) == ")") {
                 nBracket -= 1
             }
+        i += 1
         }
 
         if (pszSrc.char(at: 0) == "(") {
-            pszReturn = pszSrc.substring(1, i - 2);
+            pszReturn = pszSrc[1...(i - 2)]
         } else {
-            pszReturn = pszSrc.substring(0, i);
+            pszReturn = pszSrc[0...i]
         }
 
         return pszReturn;
@@ -322,8 +299,8 @@ public class DDFFieldDefinition {
                     iSrc += 1
                 }
                 
-                let nRepeatString = pszSrc.substring(orig_iSrc, iSrc);
-                nRepeat = Int(nRepeatString)
+                let nRepeatString = pszSrc[orig_iSrc...iSrc]
+                nRepeat = Int(nRepeatString)!
 
                 let pszContents = pszSrc.substring(from: iSrc).extractSubstring()
                 let pszExpandedContents = expandFormat(pszSrc: pszContents);
@@ -363,7 +340,7 @@ public class DDFFieldDefinition {
         /* Verify that the format string is contained within brackets. */
         /* -------------------------------------------------------------------- */
         if _formatControls.count < 2 || !_formatControls.hasPrefix("(") || !_formatControls.hasSuffix(")") {
-            print("DDFFieldDefinition: Format controls for \(pszTag ?? "Unknown Tag") field missing brackets {\(_formatControls)} : length = \(_formatControls.count), starts with {\(_formatControls.char(at: 0))}, ends with {\(_formatControls.char(at: _formatControls.count - 1))}")
+            print("DDFFieldDefinition: Format controls for \(name ) field missing brackets {\(_formatControls)} : length = \(_formatControls.count), starts with {\(_formatControls.char(at: 0))}, ends with {\(_formatControls.char(at: _formatControls.count - 1))}")
             return false
         }
 
@@ -409,12 +386,12 @@ public class DDFFieldDefinition {
             // This may be legal by the 8211 specification, but isn't encountered in
             // any formats we care about so we just blow.
             
-            if iFormatItem > paoSubfieldDefns.count {
-                print("DDFFieldDefinition: Got more formats than subfields for fied \(pszTag ?? "Unknown Tag")")
+            if iFormatItem > subfieldDefinitions.count {
+                print("DDFFieldDefinition: Got more formats than subfields for fied \(name)")
                 break
             }
             
-            if !paoSubfieldDefns[iFormatItem].setFormat(pszFormat: pszPastPrefix) {
+            if !subfieldDefinitions[iFormatItem].setFormat(pszFormat: pszPastPrefix) {
                 print("DDFFieldDefinition had problem setting format for \(pszPastPrefix)")
                 return false
             }
@@ -423,8 +400,8 @@ public class DDFFieldDefinition {
         /* -------------------------------------------------------------------- */
         /* Verify that we got enough formats, cleanup and return. */
         /* -------------------------------------------------------------------- */
-        if iFormatItem < paoSubfieldDefns.count {
-            print("DDFFieldDefinition: Got fewer formats than subfields for field \(pszTag ?? "Unknown Tag") got (\(iFormatItem), should have \(paoSubfieldDefns.count))")
+        if iFormatItem < subfieldDefinitions.count {
+            print("DDFFieldDefinition: Got fewer formats than subfields for field \(name) got (\(iFormatItem), should have \(subfieldDefinitions.count))")
             return false
         }
 
@@ -433,7 +410,7 @@ public class DDFFieldDefinition {
         /* too. This is important for repeating fields. */
         /* -------------------------------------------------------------------- */
         nFixedWidth = 0;
-        for ddfsd in paoSubfieldDefns {
+        for ddfsd in subfieldDefinitions {
             if ddfsd.getWidth() == 0 {
                 nFixedWidth = 0
                 break
@@ -444,26 +421,20 @@ public class DDFFieldDefinition {
         return true
     }
 
-    /**
-     * Find a subfield definition by it's mnemonic tag.
-     *
-     * @param pszMnemonic The name of the field.
-     *
-     * @return The subfield pointer, or nil if there isn't any such
-     *         subfield.
-     */
-    public func findSubfieldDefn(pszMnemonic: String) -> DDFSubfieldDefinition? {
-        if (paoSubfieldDefns != nil) {
-            for (Iterator it = paoSubfieldDefns.iterator(); pszMnemonic != nil
-                    && it.hasNext();) {
-                let ddfsd = it.next() // DDFSubfieldDefinition
-                if (pszMnemonic.equalsIgnoreCase(ddfsd.getName())) {
-                    return ddfsd;
-                }
+    
+    /// Find a subfield definition by it's tag.
+    ///
+    /// - Parameter named: The name of the field.
+    ///
+    /// - Returns: The subfield, or nil if not found.
+    ///
+    public func findSubfieldDefinition(named: String) -> DDFSubfieldDefinition? {
+        for subfieldDefinition in subfieldDefinitions {
+            if named.equalsIgnoreCase(subfieldDefinition.name) {
+                return subfieldDefinition
             }
         }
-
-        return nil;
+        return nil
     }
 
     /**
@@ -475,107 +446,74 @@ public class DDFFieldDefinition {
      *         range.
      */
     public func getSubfieldDefn(i: Int) -> DDFSubfieldDefinition? {
-        if paoSubfieldDefns == nil || i < 0 || i >= paoSubfieldDefns.count {
+        if i < 0 || i >= subfieldDefinitions.count {
             return nil;
         }
-        return paoSubfieldDefns[i] // (DDFSubfieldDefinition)
+        return subfieldDefinitions[i] // (DDFSubfieldDefinition)
     }
 
-    public class DataStructCode {
-        public static let ELEMENTARY = DataStructCode(code: Character("0"), name: "elementary")
-        public static let VECTOR = DataStructCode(code: Character("1"), name: "vector")
-        public static let ARRAY = DataStructCode(code: Character("2"), name: "array")
-        public static let CONCATENATED = DataStructCode(code: Character("3"), name: "concatenated")
-
-        var code = Character("0")
-        var prettyName: String
-
-        public init(code: Character, name: String) {
-            self.code = code
-            self.prettyName = name
-        }
-
-        public func getCode() -> Character {
-            return code
-        }
-
-        public func toString() -> String {
-            return prettyName;
-        }
-
-        public static func get(c: Character) -> DataStructCode {
-            if c == CONCATENATED.getCode() {
-                return CONCATENATED
+    public enum DataStructCode: CaseIterable {
+        case elementary
+        case vector
+        case array
+        case concatenated
+        
+        init(_ value: Int) {
+            switch value {
+            case 0:
+                self = .elementary
+            case 1:
+                self = .vector
+            case 2:
+                self = .array
+            case 3:
+                self = .concatenated
+            default:
+                self = .elementary
             }
-            if (c == VECTOR.getCode()) {
-                return VECTOR
-            }
-            if (c == ARRAY.getCode()) {
-                return ARRAY
-            }
-            if (c == ELEMENTARY.getCode()) {
-                return ELEMENTARY
-            }
-
-            #if DEBUG
-            print("DDFFieldDefinition tested for unknown code: \(c)")
-            #endif
-            return ELEMENTARY
         }
     }
 
-    public class DataTypeCode {
-        public static let CHAR_STRING = DataTypeCode(code: Character("0"), name: "character string")
-        public static let IMPLICIT_POINT = DataTypeCode(code: Character("1"), name: "implicit point")
-        public static let EXPLICIT_POINT = DataTypeCode(code: Character("2"), name: "explicit point")
-        public static let EXPLICIT_POINT_SCALED = DataTypeCode(code: Character("3"), name: "explicit point scaled")
-        public static let CHAR_BIT_STRING = DataTypeCode(code: Character("4"), name: "character bit string")
-        public static let BIT_STRING = DataTypeCode(code: Character("5"), name: "bit string")
-        public static let MIXED_DATA_TYPE = DataTypeCode(code: Character("6"), name: "mixed data type")
-
-        var code = Character("0")
-        var prettyName: String
-
-        public init(code: Character, name: String) {
-            self.code = code
-            self.prettyName = name
-        }
-
-        public func getCode() -> Character {
-            return code
+    public enum DataTypeCode: CaseIterable {
+        case CHAR_STRING
+        case IMPLICIT_POINT
+        case EXPLICIT_POINT
+        case EXPLICIT_POINT_SCALED
+        case CHAR_BIT_STRING
+        case BIT_STRING
+        case MIXED_DATA_TYPE
+        
+        init(_ value: Int) {
+            switch value {
+            case 0:
+                self = .CHAR_STRING
+            case 1:
+                self = .IMPLICIT_POINT
+            case 2:
+                self = .EXPLICIT_POINT
+            case 3:
+                self = .EXPLICIT_POINT_SCALED
+            case 4:
+                self = .CHAR_BIT_STRING
+            case 5:
+                self = .BIT_STRING
+            case 6:
+                self = .MIXED_DATA_TYPE
+            default:
+                self = .CHAR_STRING
+            }
         }
 
         public func toString() -> String {
-            return prettyName;
-        }
-
-        public static func get(c: Character) -> DataTypeCode {
-            if (c == IMPLICIT_POINT.getCode()) {
-                return IMPLICIT_POINT
+            switch self {
+            case .CHAR_STRING: return "character string"
+            case .IMPLICIT_POINT: return "implicit point"
+            case .EXPLICIT_POINT: return "explicit point"
+            case .EXPLICIT_POINT_SCALED: return "explicit point scaled"
+            case .CHAR_BIT_STRING: return "character bit string"
+            case .BIT_STRING: return "bit string"
+            case .MIXED_DATA_TYPE: return "mixed data type"
             }
-            if (c == EXPLICIT_POINT.getCode()) {
-                return EXPLICIT_POINT
-            }
-            if (c == EXPLICIT_POINT_SCALED.getCode()) {
-                return EXPLICIT_POINT_SCALED
-            }
-            if (c == CHAR_BIT_STRING.getCode()) {
-                return CHAR_BIT_STRING
-            }
-            if (c == BIT_STRING.getCode()) {
-                return BIT_STRING
-            }
-            if (c == MIXED_DATA_TYPE.getCode()) {
-                return MIXED_DATA_TYPE
-            }
-            if (c == CHAR_STRING.getCode()) {
-                return CHAR_STRING
-            }
-
-            #if DEBUG
-            print("DDFFieldDefinition tested for unknown data type code: \(c)")
-            #endif
-            return CHAR_STRING
         }
     }
 }

@@ -123,18 +123,18 @@ public class DDFModule {
 
         // Extract information from leader.
         if bValid {
-            _recLength = Int(String(achLeader, 0, 5))
+            _recLength = Int(DDFUtils.string(from: achLeader, start: 0, length: 5)!)!
             _interchangeLevel = achLeader[5]
             _leaderIden = achLeader[6]
             _inlineCodeExtensionIndicator = achLeader[7]
             _versionNumber = achLeader[8]
             _appIndicator = achLeader[9]
-            _fieldControlLength = Int(String(achLeader, 10, 2));
-            _fieldAreaStart = Int(String(achLeader, 12, 5));
+            _fieldControlLength = Int(DDFUtils.string(from: achLeader, start: 10, length: 2)!)!
+            _fieldAreaStart = Int(DDFUtils.string(from: achLeader, start: 12, length: 5)!)!
             _extendedCharSet = String(bytes: [achLeader[17], 0, achLeader[18], 0, achLeader[19]], encoding: .utf8)!
-            _sizeFieldLength = Int(String(achLeader, 20, 1));
-            _sizeFieldPos = Int(String(achLeader, 21, 1));
-            _sizeFieldTag = Int(String(achLeader, 23, 1));
+            _sizeFieldLength = Int(DDFUtils.string(from: achLeader, start: 20, length: 1)!)!
+            _sizeFieldPos = Int(DDFUtils.string(from: achLeader, start: 21, length: 1)!)!
+            _sizeFieldTag = Int(DDFUtils.string(from: achLeader, start: 23, length: 1)!)!
 
             if (_recLength < 12 || _fieldControlLength == 0 || _fieldAreaStart < 24 || _sizeFieldLength == 0 || _sizeFieldPos == 0 || _sizeFieldTag == 0) {
                 bValid = false
@@ -213,10 +213,10 @@ public class DDFModule {
                                count: _sizeFieldTag)
 
             nEntryOffset += _sizeFieldTag;
-            nFieldLength = Int(String(pachRecord, nEntryOffset, _sizeFieldLength))
+            nFieldLength = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldLength)!)!
 
-            nEntryOffset += _sizeFieldLength;
-            nFieldPos = Int(String(pachRecord, nEntryOffset, _sizeFieldPos))
+            nEntryOffset += _sizeFieldLength
+            nFieldPos = Int(DDFUtils.string(pachRecord, nEntryOffset, _sizeFieldPos)!)!
 
             var subPachRecord = [byte]() // byte[nFieldLength];
             DDFUtils.arraycopy(source: pachRecord,
@@ -225,7 +225,9 @@ public class DDFModule {
                                destinationStart: 0,
                                count: nFieldLength)
 
-            paoFieldDefns.add(DDFFieldDefinition(self, String(szTag, 0, _sizeFieldTag), subPachRecord))
+            paoFieldDefns.add(DDFFieldDefinition(poModuleIn: self,
+                                                 pszTagIn: DDFUtils.string(from: szTag, start: 0, length: _sizeFieldTag)!,
+                                                 pachFieldArea: subPachRecord))
         }
 
         // Free the memory...
@@ -308,38 +310,27 @@ public class DDFModule {
         return buf
     }
 
-    /**
-     * Fetch the definition of the named field.
-     *
-     * This function will scan the DDFFieldDefn's on this module, to
-     * find one with the indicated field name.
-     *
-     * @param pszFieldName The name of the field to search for. The
-     *        comparison is case insensitive.
-     *
-     * @return A pointer to the request DDFFieldDefn object is
-     *         returned, or nil if none matching the name are found.
-     *         The return object remains owned by the DDFModule, and
-     *         should not be deleted by application code.
-     */
-    public func findFieldDefn(pszFieldName: String) -> DDFFieldDefinition? {
 
-        for (Iterator it = paoFieldDefns.iterator(); it.hasNext();) {
-            DDFFieldDefinition ddffd = (DDFFieldDefinition) it.next();
-            let pszThisName = ddffd.getName()
-
-            #if DEBUG
-                print("DDFModule.findFieldDefn(" + pszFieldName + ":"
-                        + pszFieldName.length() + ") checking against ["
-                        + pszThisName + ":" + pszThisName.length() + "]");
-            #endif
-
-            if (pszFieldName.equalsIgnoreCase(pszThisName)) {
-                return ddffd;
+     /// Fetch the definition of the named field.
+     ///
+     /// - Parameter fieldName: The name of the field to search for. The
+     ///        comparison is case insensitive.
+     ///
+     /// - Returns: A pointer to the request DDFFieldDefn object is
+     ///         returned, or nil if none matching the name are found.
+     ///         The return object remains owned by the DDFModule, and
+     ///         should not be deleted by application code.
+    ///
+    /// This function will scan the DDFFieldDefn's on this module, to
+    /// find one with the indicated field name.
+    ///
+    public func findFieldDefn(fieldName: String) -> DDFFieldDefinition? {
+        for fieldDefinition in paoFieldDefns {
+            if fieldDefinition.name.equalsIgnoreCase(pszFieldName) {
+                return fieldDefinition
             }
         }
-
-        return nil;
+        return nil
     }
 
     /**

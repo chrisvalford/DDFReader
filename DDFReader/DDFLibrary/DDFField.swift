@@ -7,18 +7,20 @@
 
 import Foundation
 
-/**
- * This object represents one field in a DDFRecord. This models an
- * instance of the fields data, rather than it's data definition which
- * is handled by the DDFFieldDefn class. Note that a DDFField doesn't
- * have DDFSubfield children as you would expect. To extract subfield
- * values use GetSubfieldData() to find the right data pointer and
- * then use ExtractIntData(), ExtractFloatData() or
- * ExtractStringData().
- */
+
+/// This object represents one field in a DDFRecord. This models an
+/// instance of the fields data, rather than it's data definition which
+/// is handled by the DDFFieldDefn class.
+///
+/// Note that a DDFField doesn't  have DDFSubfield children as you would expect.
+/// To extract subfield values use
+/// GetSubfieldData() to find the right data pointer
+/// and then use
+/// ExtractIntData(), ExtractFloatData() or  ExtractStringData().
+
 public class DDFField {
 
-    var poDefn: DDFFieldDefinition
+    private (set) var definition: DDFFieldDefinition
     var pachData: [UInt8]?
     var subfields: Hashtable
     var dataPosition: Int
@@ -46,42 +48,41 @@ public class DDFField {
 
     public func initialize(poDefnIn: DDFFieldDefinition, pachDataIn: [byte]) {
         pachData = pachDataIn;
-        poDefn = poDefnIn;
+        definition = poDefnIn;
         subfields = Hashtable();
     }
 
-    /**
-     * Set how many bytes to add to the data position for absolute
-     * position in the data file for the field data.
-     */
+    /// Set how many bytes to add to the data position for absolute
+    /// position in the data file for the field data.
+    ///
+    /// - Parameter headerOffsetIn: offset to set
     func setHeaderOffset(headerOffsetIn: Int) {
         headerOffset = headerOffsetIn;
     }
 
-    /**
-     * Get how many bytes to add to the data position for absolute
-     * position in the data file for the field data.
-     */
+    /// Get how many bytes to add to the data position for absolute
+    /// position in the data file for the field data.
+    ///
+    /// - Returns:The current offset
     public func getHeaderOffset() -> Int {
         return headerOffset;
     }
 
-    /**
-     * Return the pointer to the entire data block for this record.
-     * This is an internal copy, and shouldn't be freed by the
-     * application. If nil, then check the dataPosition and
-     * daataLength for byte offsets for the data in the file, and go
-     * get it yourself. This is done for really large files where it
-     * doesn't make sense to load the data.
-     */
+
+    /// Return the pointer to the entire data block for this record.
+    /// This is an internal copy, and shouldn't be freed by the
+    /// application. If nil, then check the dataPosition and
+    /// dataLength for byte offsets for the data in the file, and go
+    /// get it yourself. This is done for really large files where it
+    /// doesn't make sense to load the data.
+    ///
+    /// - Returns: The data block
     public func getData() -> [byte] {
         return pachData!
     }
 
-    /**
-     * Return the number of bytes in the data block returned by
-     * GetData().
-     */
+    /// The size of the data
+    /// - Returns: Number of bytes in the data block
     public func getDataSize() -> Int {
         if (pachData != nil) {
             return pachData!.count
@@ -90,48 +91,35 @@ public class DDFField {
         }
     }
 
-    /** Fetch the corresponding DDFFieldDefn. */
-    public func getFieldDefn() -> DDFFieldDefinition {
-        return poDefn;
-    }
-
-    /**
-     * If getData() returns nil, it'll be your responsibilty to go
-     * after the data you need for this field.
-     *
-     * @return the byte offset into the source file to start reading
-     *         this field.
-     */
+    /// If getData() returns nil, it'll be your responsibilty to go
+    /// after the data you need for this field.
+    ///
+    /// - Returns the byte offset into the source file to start reading this field
     public func getDataPosition() -> Int {
         return dataPosition;
     }
 
-    /**
-     * If getData() returns nil, it'll be your responsibilty to go
-     * after the data you need for this field.
-     *
-     * @return the number of bytes contained in the source file for
-     *         this field.
-     */
+    /// If getData() returns nil, it'll be your responsibilty to go
+    /// after the data you need for this field.
+    ///
+    /// - Returns: the number of bytes contained in the source file for this field
     public func getDataLength() -> Int {
         return dataLength;
     }
 
-    /**
-     * Creates a string with variety of information about this field,
-     * and all it's subfields is written to the given debugging file
-     * handle. Note that field definition information (ala
-     * DDFFieldDefn) isn't written.
-     *
-     * @return String containing info.
-     */
+    /// Creates a string with variety of information about this field,
+    /// and all it's subfields is written to the given debugging file
+    /// handle. Note that field definition information (ala
+    /// DDFFieldDefn) isn't written.
+    ///
+    /// - Returns: String containing info.
     public func toString() -> String {
         var buf = "  DDFField:\n"
         buf.append("\tTag = ")
-        buf.append(poDefn.getName())
+        buf.append(definition.name)
         buf.append("\n");
         buf.append("\tDescription = ")
-        buf.append(poDefn.getDescription())
+        buf.append(definition.getDescription())
         buf.append("\n");
         let size = getDataSize();
         buf.append("\tDataSize = ")
@@ -179,7 +167,7 @@ public class DDFField {
                 break;
             }
             
-            for i in 0..<poDefn.getSubfieldCount() {
+            for i in 0..<definition.getSubfieldCount() {
                 var subPachData = [byte]() // byte[pachData.length - iOffset];
                 DDFUtils.arraycopy(source: pachData!,
                                    sourceStart: iOffset,
@@ -187,10 +175,10 @@ public class DDFField {
                                    destinationStart: 0,
                                    count: subPachData.count)
                 
-                buf.append(poDefn.getSubfieldDefn(i: i)!.dumpData(pachData: subPachData,
+                buf.append(definition.getSubfieldDefn(i: i)!.dumpData(pachData: subPachData,
                                                                    nMaxBytes: subPachData.count))
                 
-                poDefn.getSubfieldDefn(i: i)!.getDataLength(pachSourceData: subPachData,
+                definition.getSubfieldDefn(i: i)!.getDataLength(pachSourceData: subPachData,
                                                            nMaxBytes: subPachData.count,
                                                            pnConsumedBytes: &nBytesConsumed);
                 iOffset += nBytesConsumed!
@@ -218,11 +206,11 @@ public class DDFField {
         return buf
     }
 
-    /**
-     * Will return an ordered list of DDFSubfield objects. If the
-     * subfield wasn't repeated, it will provide a list containing one
-     * object. Will return nil if the subfield doesn't exist.
-     */
+    /// Will return an ordered list of DDFSubfield objects. If the
+    /// subfield wasn't repeated, it will provide a list containing one
+    /// object. Will return nil if the subfield doesn't exist.
+    /// - Parameter subfieldName: The subfield to find
+    /// - Returns: LinkedList of DDFSubfields or nil
     public func getSubfields(subfieldName: String) -> List<DDFSubfield>? {
         var obj: AnyObject? = subfields.get(subfieldName)
         if obj is List {
@@ -235,11 +223,11 @@ public class DDFField {
         return nil
     }
 
-    /**
-     * Will return a DDFSubfield object with the given name, or the
-     * first one off the list for a repeating subfield. Will return
-     * nil if the subfield doesn't exist.
-     */
+    /// - Parameter subfieldName: The subfield to find
+    /// - Returns: A subfield or nil.
+    ///
+    /// If found, will return the first occurance,
+    /// or the first occurance from the repeating subfield list
     public func getSubfield(subfieldName: String) -> DDFSubfield {
         var obj: AnyObject? = subfields.get(subfieldName)
         if obj is List {
@@ -255,31 +243,29 @@ public class DDFField {
         return obj as! DDFSubfield
     }
 
-    /**
-     * Fetch raw data pointer for a particular subfield of this field.
-     *
-     * The passed DDFSubfieldDefn (poSFDefn) should be acquired from
-     * the DDFFieldDefn corresponding with this field. This is
-     * normally done once before reading any records. This method
-     * involves a series of calls to DDFSubfield::GetDataLength() in
-     * order to track through the DDFField data to that belonging to
-     * the requested subfield. This can be relatively expensive.
-     * <p>
-     *
-     * @param poSFDefn The definition of the subfield for which the
-     *        raw data pointer is desired.
-     * @param pnMaxBytes The maximum number of bytes that can be
-     *        accessed from the returned data pointer is placed in
-     *        this int, unless it is nil.
-     * @param iSubfieldIndex The instance of this subfield to fetch.
-     *        Use zero (the default) for the first instance.
-     *
-     * @return A pointer into the DDFField's data that belongs to the
-     *         subfield. This returned pointer is invalidated by the
-     *         next record read (DDFRecord::ReadRecord()) and the
-     *         returned pointer should not be freed by the
-     *         application.
-     */
+
+    /// Fetch raw data pointer for a particular subfield of this field.
+    ///
+    /// - Parameter poSFDefn: The definition of the subfield for which the
+    ///        raw data pointer is desired.
+    /// - Parameter pnMaxBytes: The maximum number of bytes that can be
+    ///        accessed from the returned data pointer is placed in
+    ///        this int, unless it is nil.
+    /// - Parameter iSubfieldIndex: The instance of this subfield to fetch.
+    ///        Use zero (the default) for the first instance.
+    ///
+    /// - Returns: A pointer into the DDFField's data that belongs to the
+    ///         subfield. This returned pointer is invalidated by the
+    ///         next record read (DDFRecord::ReadRecord()) and the
+    ///         returned pointer should not be freed by the
+    ///         application.
+    ///
+    /// The passed DDFSubfieldDefn (poSFDefn) should be acquired from
+    /// the DDFFieldDefn corresponding with this field. This is
+    /// normally done once before reading any records. This method
+    /// involves a series of calls to DDFSubfield::GetDataLength() in
+    /// order to track through the DDFField data to that belonging to
+    /// the requested subfield. This can be relatively expensive.
     public func getSubfieldData(poSFDefn: DDFSubfieldDefinition?, pnMaxBytes: inout Int?, iSubfieldIndex: inout Int) -> [byte]? {
        var iOffset = 0;
 
@@ -287,15 +273,15 @@ public class DDFField {
             return nil
         }
 
-        if (iSubfieldIndex > 0 && poDefn.getFixedWidth() > 0) {
-            iOffset = poDefn.getFixedWidth() * iSubfieldIndex;
+        if (iSubfieldIndex > 0 && definition.getFixedWidth() > 0) {
+            iOffset = definition.getFixedWidth() * iSubfieldIndex;
             iSubfieldIndex = 0;
         }
 
         var nBytesConsumed: Int? //= 0
         while (iSubfieldIndex >= 0) {
-            for iSF in 0..<poDefn.getSubfieldCount() {
-                let poThisSFDefn = poDefn.getSubfieldDefn(i: iSF) // DDFSubfieldDefinition
+            for iSF in 0..<definition.getSubfieldCount() {
+                let poThisSFDefn = definition.getSubfieldDefn(i: iSF) // DDFSubfieldDefinition
 
                 var subPachData = [byte]() //byte[pachData.length - iOffset];
                 DDFUtils.arraycopy(source: pachData!,
@@ -331,9 +317,9 @@ public class DDFField {
             /* Loop over all the subfields of this field, advancing */
             /* the data pointer as we consume data. */
             /* -------------------------------------------------------- */
-            for iSF in 0..<poDefn.getSubfieldCount() {
+            for iSF in 0..<definition.getSubfieldCount() {
 
-                let ddfs = DDFSubfield(poSFDefn: poDefn.getSubfieldDefn(i: iSF)!, pachFieldData: pachFieldData, nBytesRemaining: nBytesRemaining)
+                let ddfs = DDFSubfield(poSFDefn: definition.getSubfieldDefn(i: iSF)!, pachFieldData: pachFieldData, nBytesRemaining: nBytesRemaining)
 
                 addSubfield(ddfs: ddfs);
 
@@ -354,7 +340,7 @@ public class DDFField {
 
     func addSubfield(ddfs: DDFSubfield) {
         #if DEBUG
-        print("DDFField(\(getFieldDefn().getName())).addSubfield(\(ddfs))")
+        print("DDFField(\(definition.name)).addSubfield(\(ddfs))")
         #endif
 
         let sfName = ddfs.getDefn().getName().trimmingCharacters(in: .whitespaces) //.intern()
@@ -373,16 +359,15 @@ public class DDFField {
         }
     }
 
-    /**
-     * How many times do the subfields of this record repeat? This
-     * will always be one for non-repeating fields.
-     *
-     * @return The number of times that the subfields of this record
-     *         occur in this record. This will be one for
-     *         non-repeating fields.
-     */
+
+    /// How many times do the subfields of this record repeat? This
+    /// will always be one for non-repeating fields.
+    ///
+    /// - Returns: The number of times that the subfields of this record
+    ///         occur in this record. This will be one for
+    ///         non-repeating fields.
     public func getRepeatCount() -> Int {
-        if (!poDefn.isRepeating()) {
+        if definition.hasRepeatingSubfields == false {
             return 1;
         }
 
@@ -390,8 +375,8 @@ public class DDFField {
         /* The occurrence count depends on how many copies of this */
         /* field's list of subfields can fit into the data space. */
         /* -------------------------------------------------------------------- */
-        if (poDefn.getFixedWidth() != 0) {
-            return pachData!.count / poDefn.getFixedWidth()
+        if (definition.getFixedWidth() != 0) {
+            return pachData!.count / definition.getFixedWidth()
         }
 
         /* -------------------------------------------------------------------- */
@@ -411,8 +396,8 @@ public class DDFField {
         var nBytesConsumed: Int? //= 0
 
         while (true) {
-            for iSF in 0..<poDefn.getSubfieldCount() {
-                let poThisSFDefn = poDefn.getSubfieldDefn(i: iSF) // DDFSubfieldDefinition
+            for iSF in 0..<definition.getSubfieldCount() {
+                let poThisSFDefn = definition.getSubfieldDefn(i: iSF) // DDFSubfieldDefinition
 
                 if poThisSFDefn!.getWidth() > pachData!.count - iOffset {
                     nBytesConsumed = poThisSFDefn!.getWidth()
