@@ -307,7 +307,7 @@ public class DDFRecord {
                 return false;
             }
 
-            var ddff: DDFField?
+            var ddff: DDFField
 
             if (readSubfields) {
 
@@ -326,9 +326,9 @@ public class DDFRecord {
             } else {
                 // Save the info for reading later directly out of the field.
                 ddff = DDFField(poDefnIn: poFieldDefn!, dataPositionIn: nFieldPos, dataLengthIn: nFieldLength)
-                ddff!.setHeaderOffset(headerOffsetIn: poModule._recLength + _fieldAreaStart)
+                ddff.setHeaderOffset(headerOffsetIn: poModule._recLength + _fieldAreaStart)
             }
-            paoFields.append(ddff!)
+            paoFields?.append(ddff)
         }
 
         return true
