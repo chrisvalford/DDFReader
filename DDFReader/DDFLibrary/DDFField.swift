@@ -321,7 +321,7 @@ public class DDFField {
 
                 let ddfs = DDFSubfield(poSFDefn: definition.getSubfieldDefn(i: iSF)!, pachFieldData: pachFieldData, nBytesRemaining: nBytesRemaining)
 
-                addSubfield(ddfs: ddfs);
+                addSubfield(ddfSubfield: ddfs);
 
                 // Reset data for next subfield;
                var nBytesConsumed = ddfs.getByteSize()
@@ -338,22 +338,22 @@ public class DDFField {
 
     }
 
-    func addSubfield(ddfs: DDFSubfield) {
+    func addSubfield(ddfSubfield: DDFSubfield) {
         #if DEBUG
-        print("DDFField(\(definition.name)).addSubfield(\(ddfs))")
+        print("DDFField(\(definition.name)).addSubfield(\(ddfSubfield))")
         #endif
 
-        let sfName = ddfs.getDefn().getName().trimmingCharacters(in: .whitespaces) //.intern()
+        let sfName = ddfSubfield.definition?.name.trimmingCharacters(in: .whitespaces) //.intern()
         var sf = subfields.get(sfName)
         if sf == nil {
-            subfields.put(sfName, ddfs)
+            subfields.put(sfName, ddfSubfield)
         } else {
             if (sf is List) {
-                (sf as! List).add(ddfs)
+                (sf as! List).add(ddfSubfield)
             } else {
                 var subList = [List]()
                 subList.add(sf)
-                subList.add(ddfs)
+                subList.add(ddfSubfield)
                 subfields.put(sfName, subList)
             }
         }

@@ -8,13 +8,10 @@
 import Foundation
 
 public class DDFUtils {
-    /** ********************************************************************* */
-    /* DDFScanVariable() */
-    /*                                                                      */
-    /* Establish the length of a variable length string in a */
-    /* record. */
-    /** ********************************************************************* */
-
+ 
+    /// DDFScanVariable()
+    ///
+    /// Establish the length of a variable length string in a  record.
     public static func scanVariable(pszRecord: [byte], nMaxChars: Int, nDelimChar: Character) -> Int {
         for n in 0..<nMaxChars - 1 {
             if pszRecord[n] == nDelimChar.asciiValue {
@@ -24,13 +21,9 @@ public class DDFUtils {
         return -1
     }
 
-    /** ********************************************************************* */
-    /* DDFFetchVariable() */
-    /*                                                                      */
-    /* Fetch a variable length string from a record, and allocate */
-    /* it as a new string (with CPLStrdup()). */
-    /** ********************************************************************* */
-
+    /// DDFFetchVariable()
+    ///
+    /// Fetch a variable length string from a record
     public static func fetchVariable(pszRecord: [byte],
                                      nMaxChars: Int,
                                      nDelimChar1: Character,

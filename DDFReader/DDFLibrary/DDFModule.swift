@@ -1,5 +1,5 @@
 //
-//  DDFModule.swift
+//  CatalogModel.swift
 //  DDFReader
 //
 //  Created by Christopher Alford on 27/4/21.
@@ -7,120 +7,82 @@
 
 import Foundation
 
-/**
- * The class that represents a ISO 8211 file.
- */
-public class DDFModule {
+// The class that represents a ISO 8211 Catalogue.
 
-    var fpDDF: BinaryFile?
-    var fileName: String
-    var nFirstRecordOffset: Int64
-
-    var _interchangeLevel: byte ;
-    var _inlineCodeExtensionIndicator: byte ;
-    var _versionNumber: byte ;
-    var _appIndicator: byte ;
-    var _fieldControlLength: Int
-    var _extendedCharSet: String // 4 characters
-
-    var _recLength: Int
-    var _leaderIden: byte
-    var _fieldAreaStart: Int
-    var _sizeFieldLength: Int
-    var _sizeFieldPos: Int
-    var _sizeFieldTag: Int
-
+class CatalogModel: ObservableObject {
+    
+    @Published var leaderData: Data = Data.init()
+    
+    var handle: FileHandle?
+    var url: URL?
+    var nFirstRecordOffset: UInt64 = 0
+    
+    var _interchangeLevel: byte?
+    var _inlineCodeExtensionIndicator: byte?
+    var _versionNumber: byte?
+    var _appIndicator: byte? ;
+    var _fieldControlLength: Int?
+    var _extendedCharSet: String? // 4 characters
+    
+    var _recLength: Int?
+    var _leaderIden: byte?
+    var _fieldAreaStart: Int?
+    var _sizeFieldLength: Int?
+    var _sizeFieldPos: Int?
+    var _sizeFieldTag: Int?
+    
     var paoFieldDefns = [DDFFieldDefinition]() //DDFFieldDefinition
     var poRecord: DDFRecord?
-
-    /**
-     * The constructor. Need to call open() if this constructor is
-     * used.
-     */
-    public init() {}
-
-    public init(ddfName: String) {
-        open(ddfName)
-    }
-
-    /**
-     * Close an ISO 8211 file. Just close the file pointer to the
-     * file.
-     */
-    public func close() {
-
-        if (fpDDF != nil) {
-            do {
-                try fpDDF.close();
-            } catch {
-                print("DDFModule IOException when closing DDFModule file")
-            }
-            fpDDF = nil
+    
+    
+    /// Open a ISO 8211 (DDF) file for reading, and read the DDR record
+    /// to build the field definitions.
+    ///
+    /// Parameter - url: The url of the file to open.
+    ///
+    /// If the open succeeds the data descriptive record (DDR) will
+    /// have been read, and all the field and subfield definitions will
+    /// be available
+    func open(url: URL) {
+        self.url = url
+        do {
+            handle = try FileHandle.init(forReadingFrom: url)
+            leaderData = handle!.readData(ofLength: 24)
+        } catch {
+            print(error.localizedDescription)
         }
-    }
-
-    /**
-     * Clean up, get rid of data and close file pointer.
-     */
-    public func destroy() {
-        close()
-
-        // Cleanup the working record.
-        poRecord = nil
-        // Cleanup the field definitions.
-        paoFieldDefns.removeAll()
-    }
-
-    /**
-     * Open a ISO 8211 (DDF) file for reading, and read the DDR record
-     * to build the field definitions.
-     *
-     * If the open succeeds the data descriptive record (DDR) will
-     * have been read, and all the field and subfield definitions will
-     * be available.
-     *
-     * @param pszFilename The name of the file to open.
-     */
-    public func open(pszFilename: String) -> BinaryFile {
-
-        fileName = pszFilename;
-
-        fpDDF = BinaryBufferedFile(pszFilename);
-
         // Read the 24 byte leader.
         var achLeader = [byte] () //byte[DDF_LEADER_SIZE];
-
-        if fpDDF.read(achLeader) != DDF_LEADER_SIZE {
-            destroy();
+        
+        if leaderData.count != DDF_LEADER_SIZE {
             #if DEBUG
-                print("DDFModule: Leader is short on DDF file "
-                        + pszFilename);
+            print("Catalog: Leader is short on DDF file \(url.lastPathComponent)")
             #endif
-            return nil;
+            destroy()
+            return
         }
-
+        
         // Verify that this appears to be a valid DDF file.
-        var i: Int
         var bValid = true
-
+        
         for i in 0..<DDF_LEADER_SIZE {
             if achLeader[i] < 32 || achLeader[i] > 126 {
                 bValid = false
             }
         }
-
+        
         if achLeader[5] != "1".utf8.first && achLeader[5] != "2".utf8.first && achLeader[5] != "3".utf8.first {
             bValid = false
         }
-
+        
         if achLeader[6] != "L".utf8.first {
             bValid = false
         }
-
+        
         if achLeader[8] != "1".utf8.first && achLeader[8] != " ".utf8.first {
             bValid = false
         }
-
+        
         // Extract information from leader.
         if bValid {
             _recLength = Int(DDFUtils.string(from: achLeader, start: 0, length: 5)!)!
@@ -135,113 +97,139 @@ public class DDFModule {
             _sizeFieldLength = Int(DDFUtils.string(from: achLeader, start: 20, length: 1)!)!
             _sizeFieldPos = Int(DDFUtils.string(from: achLeader, start: 21, length: 1)!)!
             _sizeFieldTag = Int(DDFUtils.string(from: achLeader, start: 23, length: 1)!)!
-
-            if (_recLength < 12 || _fieldControlLength == 0 || _fieldAreaStart < 24 || _sizeFieldLength == 0 || _sizeFieldPos == 0 || _sizeFieldTag == 0) {
+            
+            if (_recLength! < 12 || _fieldControlLength == 0 || _fieldAreaStart! < 24 || _sizeFieldLength == 0 || _sizeFieldPos == 0 || _sizeFieldTag == 0) {
                 bValid = false
             }
-
+            
             #if DEBUG
             print("bValid = \(bValid), from \(achLeader)")
             print(toString());
             #endif
         }
-
+        
         // If the header is invalid, then clean up, report the error
         // and return.
         if (!bValid) {
             destroy();
-
+            
             #if DEBUG
-            print("DDFModule: File " + pszFilename + " does not appear to have a valid ISO 8211 header.");
+            print("CatalogModel: File \(url.lastPathComponent) does not appear to have a valid ISO 8211 header.")
             #endif
-            return nil
+            return
         }
-
+        
         #if DEBUG
-        print("DDFModule:  header parsed successfully");
+        print("CatalogModel:  header parsed successfully");
         #endif
-
+        
         /* -------------------------------------------------------------------- */
         /* Read the whole record into memory. */
         /* -------------------------------------------------------------------- */
         var pachRecord = [byte]() // byte[_recLength];
-
+        
         DDFUtils.arraycopy(source: achLeader,
                            sourceStart: 0,
                            destination: &pachRecord,
                            destinationStart: 0,
                            count: achLeader.count)
-       var numNewRead = pachRecord.count - achLeader.count
-
-        if fpDDF.read(pachRecord, achLeader.count, numNewRead) != numNewRead {
+        let numNewRead = pachRecord.count - achLeader.count
+        if self.read(toData: &pachRecord, offset: achLeader.count, length: numNewRead) != numNewRead {
             #if DEBUG
-            print("DDFModule: Header record is short on DDF file " + pszFilename);
+            print("CatalogModel: Header record is short on DDF file \(url.lastPathComponent)");
             #endif
-
-            return nil;
+            
+            return
         }
-
+        
         /* First make a pass counting the directory entries. */
-       var nFieldEntryWidth = _sizeFieldLength + _sizeFieldPos + _sizeFieldTag;
-
-       var nFieldDefnCount = 0;
+        let nFieldEntryWidth = _sizeFieldLength! + _sizeFieldPos! + _sizeFieldTag!
+        
+        var nFieldDefnCount = 0;
         //for (i = DDF_LEADER_SIZE; i < _recLength; i += nFieldEntryWidth) {
-        for i in stride(from: DDF_LEADER_SIZE, to: _recLength, by: nFieldEntryWidth) {
+        for i in stride(from: DDF_LEADER_SIZE, to: _recLength!, by: nFieldEntryWidth) {
             if pachRecord[i] == DDF_FIELD_TERMINATOR.utf8.first {
                 break
             }
-
+            
             nFieldDefnCount += 1
         }
-
+        
         /* Allocate, and read field definitions. */
         paoFieldDefns = [DDFFieldDefinition]()
-
+        
         for i in 0..<nFieldDefnCount {
             #if DEBUG
-                print("DDFModule.open: Reading field \(i)")
+            print("CatalogModel.open: Reading field \(i)")
             #endif
-
+            
             var szTag = [byte]() // byte[128];
-           var nEntryOffset = DDF_LEADER_SIZE + i * nFieldEntryWidth
+            var nEntryOffset = DDF_LEADER_SIZE + i * nFieldEntryWidth
             var nFieldLength: Int
             var nFieldPos: Int
-
+            
             DDFUtils.arraycopy(source: pachRecord,
                                sourceStart: nEntryOffset,
                                destination: &szTag,
                                destinationStart: 0,
-                               count: _sizeFieldTag)
-
-            nEntryOffset += _sizeFieldTag;
-            nFieldLength = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldLength)!)!
-
-            nEntryOffset += _sizeFieldLength
-            nFieldPos = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldPos)!)!
-
+                               count: _sizeFieldTag!)
+            
+            nEntryOffset += _sizeFieldTag!;
+            nFieldLength = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldLength!)!)!
+            
+            nEntryOffset += _sizeFieldLength!
+            nFieldPos = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldPos!)!)!
+            
             var subPachRecord = [byte]() // byte[nFieldLength];
             DDFUtils.arraycopy(source: pachRecord,
-                               sourceStart: _fieldAreaStart + nFieldPos,
+                               sourceStart: _fieldAreaStart! + nFieldPos,
                                destination: &subPachRecord,
                                destinationStart: 0,
                                count: nFieldLength)
-
+            
             paoFieldDefns.append(DDFFieldDefinition(poModuleIn: self,
-                                                    pszTagIn: DDFUtils.string(from: szTag, start: 0, length: _sizeFieldTag)!,
+                                                    pszTagIn: DDFUtils.string(from: szTag, start: 0, length: _sizeFieldTag!)!,
                                                     pachFieldArea: subPachRecord))
         }
-
+        
         // Free the memory...
         achLeader.removeAll()
         pachRecord.removeAll()
-
+        
         // Record the current file offset, the beginning of the first
         // data record.
-        nFirstRecordOffset = fpDDF.getFilePointer()
-
-        return fpDDF
+        do {
+            nFirstRecordOffset = try (handle?.offset())!
+        } catch {
+            print("File offset is not available!")
+        }
     }
-
+    
+    /// Close an ISO 8211 file. Just close the file pointer to the file.
+    public func close() {
+        
+        if (handle != nil) {
+            do {
+                try handle?.close()
+            } catch {
+                print("Failed to close Catalog file")
+            }
+            handle = nil
+        }
+    }
+    
+    /**
+     * Clean up, get rid of data and close file pointer.
+     */
+    public func destroy() {
+        close()
+        
+        // Cleanup the working record.
+        poRecord = nil
+        // Cleanup the field definitions.
+        paoFieldDefns.removeAll()
+    }
+    
     /**
      * Write out module info to debugging file.
      *
@@ -250,22 +238,22 @@ public class DDFModule {
      * definitions read from the header.
      */
     public func toString() -> String {
-        var buf = "DDFModule:\n"
-        buf.append("    _recLength = \(_recLength)\n")
-        buf.append("    _interchangeLevel = \(_interchangeLevel)\n")
-        buf.append("    _leaderIden = \(_leaderIden)")
-        buf.append("    _inlineCodeExtensionIndicator = \(_inlineCodeExtensionIndicator)\n")
-        buf.append("    _versionNumber = \(_versionNumber)\n")
-        buf.append("    _appIndicator = \(_appIndicator)\n")
-        buf.append("    _extendedCharSet = \(_extendedCharSet)\n")
-        buf.append("    _fieldControlLength = \(_fieldControlLength)\n")
-        buf.append("    _fieldAreaStart = \(_fieldAreaStart)\n")
-        buf.append("    _sizeFieldLength = \(_sizeFieldLength)\n")
-        buf.append("    _sizeFieldPos = \(_sizeFieldPos)\n")
-        buf.append("    _sizeFieldTag = \(_sizeFieldTag)\n")
+        var buf = "CatalogModel:\n"
+        buf.append("    _recLength = \(_recLength!)\n")
+        buf.append("    _interchangeLevel = \(_interchangeLevel!)\n")
+        buf.append("    _leaderIden = \(_leaderIden!)")
+        buf.append("    _inlineCodeExtensionIndicator = \(_inlineCodeExtensionIndicator!)\n")
+        buf.append("    _versionNumber = \(_versionNumber!)\n")
+        buf.append("    _appIndicator = \(_appIndicator!)\n")
+        buf.append("    _extendedCharSet = \(_extendedCharSet!)\n")
+        buf.append("    _fieldControlLength = \(_fieldControlLength!)\n")
+        buf.append("    _fieldAreaStart = \(_fieldAreaStart!)\n")
+        buf.append("    _sizeFieldLength = \(_sizeFieldLength!)\n")
+        buf.append("    _sizeFieldPos = \(_sizeFieldPos!)\n")
+        buf.append("    _sizeFieldTag = \(_sizeFieldTag!)\n")
         return buf
     }
-
+    
     public func dump() -> String {
         var buf = ""
         var iRecord = 0;
@@ -284,17 +272,17 @@ public class DDFModule {
         } while poRecord != nil
         return buf
     }
-
-
-     /// Fetch the definition of the named field.
-     ///
-     /// - Parameter fieldName: The name of the field to search for. The
-     ///        comparison is case insensitive.
-     ///
-     /// - Returns: A pointer to the request DDFFieldDefn object is
-     ///         returned, or nil if none matching the name are found.
-     ///         The return object remains owned by the DDFModule, and
-     ///         should not be deleted by application code.
+    
+    
+    /// Fetch the definition of the named field.
+    ///
+    /// - Parameter fieldName: The name of the field to search for. The
+    ///        comparison is case insensitive.
+    ///
+    /// - Returns: A pointer to the request DDFFieldDefn object is
+    ///         returned, or nil if none matching the name are found.
+    ///         The return object remains owned by the CatalogModel, and
+    ///         should not be deleted by application code.
     ///
     /// This function will scan the DDFFieldDefn's on this module, to
     /// find one with the indicated field name.
@@ -307,7 +295,7 @@ public class DDFModule {
         }
         return nil
     }
-
+    
     /**
      * Read one record from the file, and return to the application.
      * The returned record is owned by the module, and is reused from
@@ -325,40 +313,46 @@ public class DDFModule {
         if (poRecord == nil) {
             poRecord = DDFRecord(poModuleIn: self)
         }
-
-        if poRecord?.read() {
+        
+        if poRecord?.read() == true {
             return poRecord
         } else {
             return nil
         }
     }
-
+    
     /**
-     * Method for other components to call to get the DDFModule to
+     * Method for other components to call to get the CatalogModel to
      * read bytes into the provided array.
      *
      * @param toData the bytes to put data into.
-     * @param offset the byte offset to start reading from, whereever
+     * @param offset the byte offset to start reading from, where ever
      *        the pointer currently is.
      * @param length the number of bytes to read.
      * @return the number of bytes read.
      */
-    public func read(toData: [byte], offset: Int, length: Int) -> Int {
-        if (fpDDF == nil) {
+    public func read(toData: inout [byte], offset: Int, length: Int) -> Int {
+        if (handle == nil) {
             reopen();
         }
-
-        if (fpDDF != nil) {
+        
+        if (handle != nil) {
             do {
-                return fpDDF.read(toData, offset, length);
+                let currentOffset = try handle?.offset()
+                if offset != 0 {
+                    try handle!.seek(toOffset: currentOffset! + UInt64(offset))
+                }
+                let data = try handle!.read(upToCount: length)
+                toData = Array(data!)
+                return toData.count
             } catch {
-                print("DDFModule.read(): \(error.localizedDescription) reading from \(offset) to \(length) ")
+                print("CatalogModel.read(): \(error.localizedDescription) reading from \(offset) to \(length) ")
                 //into \(toData == nil ? "nil [byte]" : "byte[\(toData.count)]")
             }
         }
         return 0
     }
-
+    
     /**
      * Convenience method to read a byte from the data file. Assumes
      * that you know what you are doing based on the parameters read
@@ -366,20 +360,22 @@ public class DDFModule {
      * subfields.
      */
     public func read() -> Int {
-        if (fpDDF == nil) {
+        if (handle == nil) {
             reopen();
         }
-
-        if (fpDDF != nil) {
+        
+        if (handle != nil) {
             do {
-                return fpDDF.read();
+                let value = try handle!.read(upToCount: 1)
+                let n = Array(value!).first
+                return Int(n!)
             } catch {
-                print("DDFModule.read(): IOException caught");
+                print("Catalog.read(): IOException caught");
             }
         }
         return 0;
     }
-
+    
     /**
      * Convenience method to seek to a location in the data file.
      * Assumes that you know what you are doing based on the
@@ -388,18 +384,22 @@ public class DDFModule {
      *
      * @param pos the byte position to reposition the file pointer to.
      */
-    public func seek(pos: Int64) throws {
-        if (fpDDF == nil) {
-            reopen();
+    public func seek(pos: UInt64) throws {
+        if (handle == nil) {
+            reopen()
         }
-
-        if (fpDDF != nil) {
-            fpDDF.seek(pos);
+        
+        if (handle != nil) {
+            do {
+                try handle?.seek(toOffset: pos)
+            } catch {
+                print("Error seeking to new position: \(error.localizedDescription)")
+            }
         } else {
-            print("DDFModule doesn't have a pointer to a file")
+            print("Catalog doesn't have a pointer to a file")
         }
     }
-
+    
     /**
      * Fetch a field definition by index.
      *
@@ -413,7 +413,7 @@ public class DDFModule {
         }
         return nil
     }
-
+    
     /**
      * Return to first record.
      *
@@ -425,30 +425,34 @@ public class DDFModule {
      *        should return to the first data record. Otherwise it is
      *        an absolute byte offset in the file.
      */
-    public func rewind(nOffset: Int64) throws {
+    public func rewind(nOffset: UInt64) throws {
         var offset = nOffset
         if (offset == -1) {
-            offset = nFirstRecordOffset;
+            offset = nFirstRecordOffset
         }
-
-        if (fpDDF != nil) {
-            fpDDF.seek(offset);
-
+        
+        if (handle != nil) {
+            do {
+                try handle?.seek(toOffset: offset)
+            } catch {
+                print("Error rewinding file: \(error.localizedDescription)")
+            }
             // Don't know what this has to do with anything...
             if (offset == nFirstRecordOffset && poRecord != nil) {
                 poRecord?.clear()
             }
         }
-
+        
     }
-
+    
     public func reopen() {
         do {
-            if (fpDDF == nil) {
-                fpDDF = BinaryBufferedFile(fileName)
+            if (handle == nil) {
+                handle = try FileHandle.init(forReadingFrom: url!)
+                leaderData = handle!.readData(ofLength: 24)
             }
         } catch {
-
+            print(error.localizedDescription)
         }
     }
 }

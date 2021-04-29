@@ -16,7 +16,7 @@ import Foundation
  */
 public class DDFRecord {
 
-    var poModule: DDFModule
+    var poModule: CatalogModel
     var nReuseHeader: Bool
     var nFieldOffset: Int // field data area, not dir entries.
     var nDataSize: Int // Whole record except leader with header
@@ -27,7 +27,7 @@ public class DDFRecord {
 
     var bIsClone: Bool = false
 
-    public init(poModuleIn: DDFModule) {
+    public init(poModuleIn: CatalogModel) {
         poModule = poModuleIn
         nReuseHeader = false
         nFieldOffset = -1
@@ -57,9 +57,9 @@ public class DDFRecord {
     }
 
     /**
-     * Fetch the DDFModule with which this record is associated.
+     * Fetch the CatalogModel with which this record is associated.
      */
-    public func getModule() -> DDFModule {
+    public func getModule() -> CatalogModel {
         return poModule
     }
 
@@ -91,9 +91,9 @@ public class DDFRecord {
      * build a field list for the record (or reuse the existing one if
      * reusing headers). It is expected that the file pointer will be
      * positioned at the beginning of a data record. It is the
-     * DDFModule's responsibility to do so.
+     * CatalogModel's responsibility to do so.
      *
-     * This method should only be called by the DDFModule class.
+     * This method should only be called by the CatalogModel class.
      */
     func read() -> Bool {
         /* -------------------------------------------------------------------- */

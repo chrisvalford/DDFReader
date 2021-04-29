@@ -9,13 +9,13 @@ import Foundation
 
 /**
  * Information from the DDR defining one field. Note that just because
- * a field is defined for a DDFModule doesn't mean that it actually
+ * a field is defined for a CatalogModel doesn't mean that it actually
  * occurs on any records in the module. DDFFieldDefns are normally
  * just significant as containers of the DDFSubfieldDefinitions.
  */
 public class DDFFieldDefinition {
 
-    var poModule: DDFModule?
+    var poModule: CatalogModel?
     private (set) var name: String
 
     var _fieldName: String?
@@ -71,20 +71,20 @@ public class DDFFieldDefinition {
         _formatControls = nil
     }
 
-    public init(poModuleIn: DDFModule, pszTagIn: String, pachFieldArea: [byte]) {
+    public init(poModuleIn: CatalogModel, pszTagIn: String, pachFieldArea: [byte]) {
         initialize(poModuleIn: poModuleIn, pszTagIn: pszTagIn, pachFieldArea: pachFieldArea)
     }
 
     /**
      * Initialize the field definition from the information in the DDR
-     * record. This is called by DDFModule.open().
+     * record. This is called by CatalogModel.open().
      *
-     * @param poModuleIn DDFModule representing file being read.
+     * @param poModuleIn CatalogModel representing file being read.
      * @param pszTagIn the name of this field.
      * @param pachFieldArea the data bytes in the file representing
      *        the field from the header.
      */
-    public func initialize(poModuleIn: DDFModule, pszTagIn: String, pachFieldArea: [byte]) {
+    public func initialize(poModuleIn: CatalogModel, pszTagIn: String, pachFieldArea: [byte]) {
 
         /// pachFieldArea needs to be specified better. It's an
         /// offset into a character array, and we need to know what
@@ -312,7 +312,7 @@ public class DDFFieldDefinition {
                     }
                 }
 
-                if iSrc == "(" {
+                if iSrc == 40 { // Open parentheis "("
                     iSrc += pszContents.count + 2;
                 } else {
                     iSrc += pszContents.count
