@@ -30,7 +30,7 @@ public class DDFModule {
     var _sizeFieldPos: Int
     var _sizeFieldTag: Int
 
-    var paoFieldDefns: [DDFFieldDefinitions]? //DDFFieldDefinitions
+    var paoFieldDefns = [DDFFieldDefinition]() //DDFFieldDefinition
     var poRecord: DDFRecord?
 
     /**
@@ -68,7 +68,7 @@ public class DDFModule {
         // Cleanup the working record.
         poRecord = nil
         // Cleanup the field definitions.
-        paoFieldDefns = nil
+        paoFieldDefns.removeAll()
     }
 
     /**
@@ -185,8 +185,9 @@ public class DDFModule {
        var nFieldEntryWidth = _sizeFieldLength + _sizeFieldPos + _sizeFieldTag;
 
        var nFieldDefnCount = 0;
-        for (i = DDF_LEADER_SIZE; i < _recLength; i += nFieldEntryWidth) {
-            if pachRecord[i] == DDF_FIELD_TERMINATOR {
+        //for (i = DDF_LEADER_SIZE; i < _recLength; i += nFieldEntryWidth) {
+        for i in stride(from: DDF_LEADER_SIZE, to: _recLength, by: nFieldEntryWidth) {
+            if pachRecord[i] == DDF_FIELD_TERMINATOR.utf8.first {
                 break
             }
 
@@ -216,7 +217,7 @@ public class DDFModule {
             nFieldLength = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldLength)!)!
 
             nEntryOffset += _sizeFieldLength
-            nFieldPos = Int(DDFUtils.string(pachRecord, nEntryOffset, _sizeFieldPos)!)!
+            nFieldPos = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldPos)!)!
 
             var subPachRecord = [byte]() // byte[nFieldLength];
             DDFUtils.arraycopy(source: pachRecord,
@@ -225,20 +226,20 @@ public class DDFModule {
                                destinationStart: 0,
                                count: nFieldLength)
 
-            paoFieldDefns.add(DDFFieldDefinition(poModuleIn: self,
-                                                 pszTagIn: DDFUtils.string(from: szTag, start: 0, length: _sizeFieldTag)!,
-                                                 pachFieldArea: subPachRecord))
+            paoFieldDefns.append(DDFFieldDefinition(poModuleIn: self,
+                                                    pszTagIn: DDFUtils.string(from: szTag, start: 0, length: _sizeFieldTag)!,
+                                                    pachFieldArea: subPachRecord))
         }
 
         // Free the memory...
-        achLeader = nil;
-        pachRecord = nil;
+        achLeader.removeAll()
+        pachRecord.removeAll()
 
         // Record the current file offset, the beginning of the first
         // data record.
         nFirstRecordOffset = fpDDF.getFilePointer()
 
-        return fpDDF;
+        return fpDDF
     }
 
     /**
@@ -250,61 +251,35 @@ public class DDFModule {
      */
     public func toString() -> String {
         var buf = "DDFModule:\n"
-        buf.append("    _recLength = ")
-        buf.append(_recLength)
-        buf.append("\n");
-        buf.append("    _interchangeLevel = ")
-        buf.append(_interchangeLevel)
-        buf.append("\n");
-        buf.append("    _leaderIden = ")
-        buf.append(_leaderIden)
-        buf.append("\n");
-        buf.append("    _inlineCodeExtensionIndicator = ")
-        buf.append(_inlineCodeExtensionIndicator)
-        buf.append("\n");
-        buf.append("    _versionNumber = ")
-        buf.append(_versionNumber)
-        buf.append("\n");
-        buf.append("    _appIndicator = ")
-        buf.append(_appIndicator)
-        buf.append("\n");
-        buf.append("    _extendedCharSet = ")
-        buf.append(_extendedCharSet)
-        buf.append("\n");
-        buf.append("    _fieldControlLength = ")
-        buf.append(_fieldControlLength)
-        buf.append("\n");
-        buf.append("    _fieldAreaStart = ")
-        buf.append(_fieldAreaStart)
-        buf.append("\n");
-        buf.append("    _sizeFieldLength = ")
-        buf.append(_sizeFieldLength)
-        buf.append("\n");
-        buf.append("    _sizeFieldPos = ")
-        buf.append(_sizeFieldPos)
-        buf.append("\n");
-        buf.append("    _sizeFieldTag = ")
-        buf.append(_sizeFieldTag)
-        buf.append("\n");
+        buf.append("    _recLength = \(_recLength)\n")
+        buf.append("    _interchangeLevel = \(_interchangeLevel)\n")
+        buf.append("    _leaderIden = \(_leaderIden)")
+        buf.append("    _inlineCodeExtensionIndicator = \(_inlineCodeExtensionIndicator)\n")
+        buf.append("    _versionNumber = \(_versionNumber)\n")
+        buf.append("    _appIndicator = \(_appIndicator)\n")
+        buf.append("    _extendedCharSet = \(_extendedCharSet)\n")
+        buf.append("    _fieldControlLength = \(_fieldControlLength)\n")
+        buf.append("    _fieldAreaStart = \(_fieldAreaStart)\n")
+        buf.append("    _sizeFieldLength = \(_sizeFieldLength)\n")
+        buf.append("    _sizeFieldPos = \(_sizeFieldPos)\n")
+        buf.append("    _sizeFieldTag = \(_sizeFieldTag)\n")
         return buf
     }
 
     public func dump() -> String {
         var buf = ""
-        var poRecord: DDFRecord
-       var iRecord = 0;
+        var iRecord = 0;
         repeat {
-            poRecord = readRecord()
-            buf.append("  Record ")
-            buf.append((iRecord++))
-            buf.append("(")
-            buf.append(poRecord.getDataSize())
-            buf.append(" bytes)\n");
-
-            if poRecord.paoFields?.isEmpty == false {
-                for record in poRecord.paoFields! {
-                    buf.append(record.toString()) // DDFField
+            if let poRecord = readRecord() {
+                buf.append("  Record \(iRecord)(\(poRecord.getDataSize()) bytes)\n")
+                iRecord += 1
+                if poRecord.ddfFields.isEmpty == false {
+                    for record in poRecord.ddfFields {
+                        buf.append(record.toString()) // DDFField
+                    }
                 }
+            } else {
+                break
             }
         } while poRecord != nil
         return buf
@@ -326,7 +301,7 @@ public class DDFModule {
     ///
     public func findFieldDefn(fieldName: String) -> DDFFieldDefinition? {
         for fieldDefinition in paoFieldDefns {
-            if fieldDefinition.name.equalsIgnoreCase(pszFieldName) {
+            if fieldDefinition.name.equalsIgnoreCase(fieldName) {
                 return fieldDefinition
             }
         }
@@ -348,13 +323,13 @@ public class DDFModule {
      */
     public func readRecord() -> DDFRecord? {
         if (poRecord == nil) {
-            poRecord = DDFRecord(poModuleIn: self);
+            poRecord = DDFRecord(poModuleIn: self)
         }
 
-        if (poRecord.read()) {
-            return poRecord;
+        if poRecord?.read() {
+            return poRecord
         } else {
-            return nil;
+            return nil
         }
     }
 
@@ -377,19 +352,11 @@ public class DDFModule {
             do {
                 return fpDDF.read(toData, offset, length);
             } catch {
-                print("DDFModule.read(): "
-                        + error.localizedDescription
-                        + " reading from "
-                        + offset
-                        + " to "
-                        + length
-                        + " into "
-                        + (toData == nil ? "nil [byte]" : "byte["
-                                + toData.length + "]"));
-                aioobe.printStackTrace();
+                print("DDFModule.read(): \(error.localizedDescription) reading from \(offset) to \(length) ")
+                //into \(toData == nil ? "nil [byte]" : "byte[\(toData.count)]")
             }
         }
-        return 0;
+        return 0
     }
 
     /**
@@ -429,7 +396,7 @@ public class DDFModule {
         if (fpDDF != nil) {
             fpDDF.seek(pos);
         } else {
-            throw  IOException("DDFModule doesn't have a pointer to a file");
+            print("DDFModule doesn't have a pointer to a file")
         }
     }
 
@@ -459,16 +426,17 @@ public class DDFModule {
      *        an absolute byte offset in the file.
      */
     public func rewind(nOffset: Int64) throws {
-        if (nOffset == -1) {
-            nOffset = nFirstRecordOffset;
+        var offset = nOffset
+        if (offset == -1) {
+            offset = nFirstRecordOffset;
         }
 
         if (fpDDF != nil) {
-            fpDDF.seek(nOffset);
+            fpDDF.seek(offset);
 
             // Don't know what this has to do with anything...
-            if (nOffset == nFirstRecordOffset && poRecord != nil) {
-                poRecord.clear();
+            if (offset == nFirstRecordOffset && poRecord != nil) {
+                poRecord?.clear()
             }
         }
 
