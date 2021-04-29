@@ -27,6 +27,11 @@ extension String {
         let endIndex = index(from: r.upperBound)
         return String(self[startIndex..<endIndex])
     }
+    
+    func substring(_ begin: Int, _ end: Int) -> String {
+        return self.substring(with: begin..<end+1)
+    }
+    
     // char(at: at:) returns a character at an integer (zero-based) position.
     // example:
     // let str = "hello"

@@ -91,7 +91,7 @@ public class DDFSubfieldDefinition {
                 i += 1
             }
             
-            nFormatWidth = Int(pszFormat.substring(2, i))
+            nFormatWidth = Int(pszFormat.substring(2, i))!
             bIsVariable = (nFormatWidth == 0)
         } else {
             bIsVariable = true
@@ -122,14 +122,14 @@ public class DDFSubfieldDefinition {
                 }
                 
                 let numberString = pszFormatString.substring(2, numEndIndex)
-                nFormatWidth = Int(numberString)
+                nFormatWidth = Int(numberString)!
                 
                 if nFormatWidth % 8 != 0 {
                     print("DDFSubfieldDefinition.setFormat() problem with \(pszFormatString.char(at: 0)) not being modded with 8 evenly");
                     return false
                 }
                 
-                nFormatWidth = Int(numberString) / 8
+                nFormatWidth = Int(numberString)! / 8
                 eBinaryFormat = .SInt // good default, works for SDTS.
                 
                 if (nFormatWidth < 5) {
@@ -146,7 +146,7 @@ public class DDFSubfieldDefinition {
                 while numEndIndex < pszFormatString.count && pszFormatString.char(at: numEndIndex).isNumber {
                     numEndIndex += 1
                 }
-                nFormatWidth = Int(pszFormatString.substring(2,numEndIndex))
+                nFormatWidth = Int(pszFormatString.substring(2,numEndIndex))!
                 
                 if (eBinaryFormat == DDFBinaryFormat.SInt || eBinaryFormat == DDFBinaryFormat.UInt) {
                     dataType = DDFDataType.DDFInt;
@@ -243,8 +243,8 @@ public class DDFSubfieldDefinition {
                 bCheckFieldTerminator = false
             }
             
-            while nLength < nMaxBytes && pachSourceData[nLength] != chFormatDelimeter.utf8 {
-                if bCheckFieldTerminator && pachSourceData[nLength] == DDF_FIELD_TERMINATOR.utf8 {
+            while nLength < nMaxBytes && pachSourceData[nLength] != chFormatDelimeter.utf8.first {
+                if bCheckFieldTerminator && pachSourceData[nLength] == DDF_FIELD_TERMINATOR.utf8.first {
                     break
                 }
                 nLength += 1
@@ -462,7 +462,7 @@ public class DDFSubfieldDefinition {
             }
             
             do {
-                return Int(dataString)
+                return Int(dataString)!
             } catch  {
                 #if DEBUG
                 print("DDFSubfieldDefinition.extractIntData: number format problem: \(dataString)")

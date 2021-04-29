@@ -9,7 +9,7 @@ import Foundation
 
 // The class that represents a ISO 8211 Catalogue.
 
-class CatalogModel: ObservableObject {
+public class CatalogModel: ObservableObject {
     
     @Published var leaderData: Data = Data.init()
     
@@ -426,20 +426,26 @@ class CatalogModel: ObservableObject {
      *        an absolute byte offset in the file.
      */
     public func rewind(nOffset: UInt64) throws {
-        var offset = nOffset
-        if (offset == -1) {
-            offset = nFirstRecordOffset
-        }
-        
         if (handle != nil) {
             do {
-                try handle?.seek(toOffset: offset)
+                try handle?.seek(toOffset: nOffset)
             } catch {
                 print("Error rewinding file: \(error.localizedDescription)")
             }
             // Don't know what this has to do with anything...
-            if (offset == nFirstRecordOffset && poRecord != nil) {
+            if (nOffset == nFirstRecordOffset && poRecord != nil) {
                 poRecord?.clear()
+            }
+        }
+    }
+    
+    public func rewindToFirst() throws {
+        
+        if (handle != nil) {
+            do {
+                try handle?.seek(toOffset: nFirstRecordOffset)
+            } catch {
+                print("Error rewinding file: \(error.localizedDescription)")
             }
         }
         

@@ -113,10 +113,10 @@ public class DDFFieldDefinition {
 
         var tempData = [byte]() // byte[pachFieldArea.length - iFDOffset];
         DDFUtils.arraycopy(source: pachFieldArea,
-                           sourceStart: iFDOffset,
+                           sourceStart: iFDOffset!,
                            destination: &tempData,
                            destinationStart: 0,
-                           count: pachFieldArea.count - iFDOffset);
+                           count: pachFieldArea.count - iFDOffset!);
 
         var nCharsConsumed = 0
 
@@ -129,27 +129,27 @@ public class DDFFieldDefinition {
         print("DDFFieldDefinition.initialize(\(pszTagIn)): created field name \(_fieldName ?? "Unknown")")
         #endif
 
-        iFDOffset += nCharsConsumed
+        iFDOffset! += nCharsConsumed
 
         tempData  = [byte]() // byte[pachFieldArea.length - iFDOffset];
         DDFUtils.arraycopy(source: pachFieldArea,
-                           sourceStart: iFDOffset,
+                           sourceStart: iFDOffset!,
                            destination: &tempData,
                            destinationStart: 0,
-                           count: pachFieldArea.count - iFDOffset);
+                           count: pachFieldArea.count - iFDOffset!);
         _arrayDescr = DDFUtils.fetchVariable(pszRecord: tempData,
                                              nMaxChars: tempData.count,
                                              nDelimChar1: DDF_UNIT_TERMINATOR,
                                              nDelimChar2: DDF_FIELD_TERMINATOR,
                                              pnConsumedChars: &nCharsConsumed);
-        iFDOffset += nCharsConsumed
+        iFDOffset! += nCharsConsumed
 
         tempData = [byte]() // byte[pachFieldArea.length - iFDOffset];
         DDFUtils.arraycopy(source: pachFieldArea,
-                           sourceStart: iFDOffset,
+                           sourceStart: iFDOffset!,
                            destination: &tempData,
                            destinationStart: 0,
-                           count: pachFieldArea.count - iFDOffset);
+                           count: pachFieldArea.count - iFDOffset!);
 
         _formatControls = DDFUtils.fetchVariable(pszRecord: tempData,
                                                  nMaxChars: tempData.count,

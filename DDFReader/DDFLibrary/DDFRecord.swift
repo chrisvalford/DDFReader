@@ -414,7 +414,7 @@ public class DDFRecord {
         /* Return the extracted value. */
         /* -------------------------------------------------------------------- */
 
-        return poSFDefn?.extractIntData(pachSourceData: pachData, nMaxBytes: nBytesRemaining, pnConsumedBytes: nil)
+        return poSFDefn?.extractIntData(pachSourceData: pachData, nMaxBytes: nBytesRemaining!, pnConsumedBytes: nil)
     }
 
     /**
