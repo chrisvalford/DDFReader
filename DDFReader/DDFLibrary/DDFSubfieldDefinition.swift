@@ -580,3 +580,14 @@ public class DDFSubfieldDefinition {
     }
     
 }
+
+extension DDFSubfieldDefinition: Equatable {
+    public static func == (lhs: DDFSubfieldDefinition, rhs: DDFSubfieldDefinition) -> Bool {
+        return lhs.name == rhs.name &&
+        lhs.pszFormatString == rhs.pszFormatString &&
+        lhs.dataType == rhs.dataType &&
+        lhs.eBinaryFormat == rhs.eBinaryFormat
+    }
+    
+    
+}

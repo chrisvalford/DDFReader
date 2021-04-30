@@ -7,6 +7,17 @@
 
 import Foundation
 
+/// Container for DDFSubFields
+struct DDFSubfieldItem {
+    var id: String
+    var ddfSubfield: DDFSubfield
+}
+extension DDFSubfieldItem: Equatable {
+    static func == (lhs: DDFSubfieldItem, rhs: DDFSubfieldItem) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
 /**
  * Class containing subfield information for a DDFField object.
  */

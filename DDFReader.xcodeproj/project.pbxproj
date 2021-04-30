@@ -22,7 +22,7 @@
 		2F9BFBB22637F6200000CB91 /* DDFSubfield.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB12637F6200000CB91 /* DDFSubfield.swift */; };
 		2F9BFBB42637F63C0000CB91 /* DDFSubfieldDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB32637F63C0000CB91 /* DDFSubfieldDefinition.swift */; };
 		2F9BFBB62637F65F0000CB91 /* DDFUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB52637F65F0000CB91 /* DDFUtils.swift */; };
-		2F9BFBB82637F9B10000CB91 /* List.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB72637F9B10000CB91 /* List.swift */; };
+		2F9BFBB82637F9B10000CB91 /* LinkedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB72637F9B10000CB91 /* LinkedList.swift */; };
 		2F9BFBBA26381D1D0000CB91 /* String+.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9BFBB926381D1D0000CB91 /* String+.swift */; };
 /* End PBXBuildFile section */
 
@@ -65,7 +65,7 @@
 		2F9BFBB12637F6200000CB91 /* DDFSubfield.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFSubfield.swift; sourceTree = "<group>"; };
 		2F9BFBB32637F63C0000CB91 /* DDFSubfieldDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFSubfieldDefinition.swift; sourceTree = "<group>"; };
 		2F9BFBB52637F65F0000CB91 /* DDFUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDFUtils.swift; sourceTree = "<group>"; };
-		2F9BFBB72637F9B10000CB91 /* List.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = List.swift; sourceTree = "<group>"; };
+		2F9BFBB72637F9B10000CB91 /* LinkedList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedList.swift; sourceTree = "<group>"; };
 		2F9BFBB926381D1D0000CB91 /* String+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -165,7 +165,7 @@
 				2F9BFBB12637F6200000CB91 /* DDFSubfield.swift */,
 				2F9BFBB32637F63C0000CB91 /* DDFSubfieldDefinition.swift */,
 				2F9BFBB52637F65F0000CB91 /* DDFUtils.swift */,
-				2F9BFBB72637F9B10000CB91 /* List.swift */,
+				2F9BFBB72637F9B10000CB91 /* LinkedList.swift */,
 				2F9BFBB926381D1D0000CB91 /* String+.swift */,
 			);
 			path = DDFLibrary;
@@ -305,7 +305,7 @@
 				2F9BFBA82637F4EE0000CB91 /* DDFConstants.swift in Sources */,
 				2F9BFB7C2637F3FC0000CB91 /* ContentView.swift in Sources */,
 				2F9BFBA62637F4270000CB91 /* DDFDataType.swift in Sources */,
-				2F9BFBB82637F9B10000CB91 /* List.swift in Sources */,
+				2F9BFBB82637F9B10000CB91 /* LinkedList.swift in Sources */,
 				2F9BFBAE2637F5B70000CB91 /* DDFModule.swift in Sources */,
 				2F9BFB7A2637F3FC0000CB91 /* DDFReaderApp.swift in Sources */,
 				2F9BFBAA2637F5540000CB91 /* DDFField.swift in Sources */,

@@ -22,7 +22,7 @@ public class DDFField {
 
     private (set) var definition: DDFFieldDefinition
     var pachData: [UInt8]?
-    var subfields: Hashtable
+    var subfields = [DDFSubfieldItem]()
     var dataPosition: Int
     var dataLength: Int
     var headerOffset: Int
@@ -30,9 +30,9 @@ public class DDFField {
     public init() {}
 
     public init(poDefnIn: DDFFieldDefinition, dataPositionIn: Int, dataLengthIn: Int) {
-        initialize(poDefnIn, nil);
-        dataPosition = dataPositionIn;
-        dataLength = dataLengthIn;
+        initialize(poDefnIn: poDefnIn, pachDataIn: nil)
+        dataPosition = dataPositionIn
+        dataLength = dataLengthIn
     }
 
     public convenience init(poDefnIn: DDFFieldDefinition, pachDataIn: [byte]) {
@@ -42,14 +42,14 @@ public class DDFField {
     public init(poDefnIn: DDFFieldDefinition, pachDataIn: [byte], doSubfields: Bool) {
         initialize(poDefnIn: poDefnIn, pachDataIn: pachDataIn)
         if (doSubfields) {
-            buildSubfields();
+            buildSubfields()
         }
     }
 
-    public func initialize(poDefnIn: DDFFieldDefinition, pachDataIn: [byte]) {
-        pachData = pachDataIn;
-        definition = poDefnIn;
-        subfields = Hashtable();
+    public func initialize(poDefnIn: DDFFieldDefinition, pachDataIn: [byte]?) {
+        pachData = pachDataIn
+        definition = poDefnIn
+        subfields.removeAll()
     }
 
     /// Set how many bytes to add to the data position for absolute
@@ -211,14 +211,14 @@ public class DDFField {
     /// object. Will return nil if the subfield doesn't exist.
     /// - Parameter subfieldName: The subfield to find
     /// - Returns: LinkedList of DDFSubfields or nil
-    public func getSubfields(subfieldName: String) -> List<DDFSubfield>? {
-        var obj: AnyObject? = subfields.get(subfieldName)
-        if obj is List {
-            return obj as? List
-        } else if obj != nil {
-            var ll =  List()
-            ll.add(obj)
-            return ll
+    public func getSubfields(subfieldName: String) -> [DDFSubfield]? {
+        let found = subfields.all(where: { $0.id.hasPrefix(subfieldName) })
+        if found.count > 0 {
+            var items = [DDFSubfield]()
+            for item in found {
+                items.append(item.ddfSubfield)
+            }
+            return items.sorted { $0.definition!.name < $1.definition!.name }
         }
         return nil
     }
@@ -228,19 +228,8 @@ public class DDFField {
     ///
     /// If found, will return the first occurance,
     /// or the first occurance from the repeating subfield list
-    public func getSubfield(subfieldName: String) -> DDFSubfield {
-        var obj: AnyObject? = subfields.get(subfieldName)
-        if obj is List {
-            var l = obj as! List
-            if l.isEmpty() == false {
-                return l.get(0) as! DDFSubfield
-            }
-            obj = nil
-        }
-
-        // May be nil if subfield list above is empty. Not sure if
-        // that's possible.
-        return obj as! DDFSubfield
+    public func getSubfield(subfieldName: String) -> DDFSubfield? {
+        return subfields.first(where: { $0.id.hasPrefix(subfieldName) })?.ddfSubfield ?? nil
     }
 
 
@@ -321,7 +310,7 @@ public class DDFField {
 
                 let ddfs = DDFSubfield(poSFDefn: definition.getSubfieldDefn(i: iSF)!, pachFieldData: pachFieldData, nBytesRemaining: nBytesRemaining)
 
-                addSubfield(ddfSubfield: ddfs);
+                addSubfield(subfield: ddfs);
 
                 // Reset data for next subfield;
                var nBytesConsumed = ddfs.getByteSize()
@@ -338,23 +327,28 @@ public class DDFField {
 
     }
 
-    func addSubfield(ddfSubfield: DDFSubfield) {
+    func addSubfield(subfield: DDFSubfield) {
         #if DEBUG
-        print("DDFField(\(definition.name)).addSubfield(\(ddfSubfield))")
+        print("DDFField(\(definition.name)).addSubfield(\(subfield))")
         #endif
 
-        let sfName = ddfSubfield.definition?.name.trimmingCharacters(in: .whitespaces) //.intern()
-        var sf = subfields.get(sfName)
-        if sf == nil {
-            subfields.put(sfName, ddfSubfield)
+        if let index = subfields.lastIndex(where: { $0.id.hasPrefix(subfield.definition!.name) }) {
+            // Found so get the 'count'
+            let components = subfields[index].id.components(separatedBy: "#")
+            let count = Int(components[1])
+            subfields.insert(DDFSubfieldItem(id: "\(subfield.definition!.name)#\(count!+1)", ddfSubfield: subfield), at: index+1)
         } else {
-            if (sf is List) {
-                (sf as! List).add(ddfSubfield)
-            } else {
-                var subList = [List]()
-                subList.add(sf)
-                subList.add(ddfSubfield)
-                subfields.put(sfName, subList)
+            let insertName = "\(subfield.definition!.name)#0"
+            if subfields.isEmpty == true {
+                subfields.append(DDFSubfieldItem(id: insertName, ddfSubfield: subfield))
+            }
+            for index in 0..<subfields.count {
+                if subfields[index].id <= insertName {
+                    continue
+                } else {
+                    subfields.insert(DDFSubfieldItem(id: insertName, ddfSubfield: subfield), at: index)
+                    return
+                }
             }
         }
     }
@@ -425,3 +419,8 @@ public class DDFField {
     }
 }
 
+fileprivate extension Array where Element: Equatable {
+    func all(where predicate: (Element) -> Bool) -> [Element]  {
+        return self.compactMap { predicate($0) ? $0 : nil }
+    }
+}
