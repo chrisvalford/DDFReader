@@ -16,17 +16,17 @@ import Foundation
 public class DDFFieldDefinition {
 
     var poModule: CatalogModel?
-    private (set) var name: String
+    private (set) var name: String = ""
 
     var _fieldName: String?
     var _arrayDescr: String?
     var _formatControls: String?
 
     var hasRepeatingSubfields: Bool = false
-    var nFixedWidth: Int // zero if variable.
+    var nFixedWidth: Int  = 0// zero if variable.
 
-    var _data_struct_code: DataStructCode
-    var _data_type_code: DataTypeCode
+    var _data_struct_code: DataStructCode = .elementary
+    var _data_type_code: DataTypeCode = .MIXED_DATA_TYPE
 
     private (set) var subfieldDefinitions = [DDFSubfieldDefinition]()
 
@@ -88,8 +88,7 @@ public class DDFFieldDefinition {
 
         /// pachFieldArea needs to be specified better. It's an
         /// offset into a character array, and we need to know what
-        // it
-        /// is to scope it better in Java.
+        /// it is to scope it better.
 
        var iFDOffset = poModuleIn._fieldControlLength
 
@@ -99,8 +98,10 @@ public class DDFFieldDefinition {
         /* -------------------------------------------------------------------- */
         /* Set the data struct and type codes. */
         /* -------------------------------------------------------------------- */
-        _data_struct_code = DataStructCode(Int(String(Character(UnicodeScalar(pachFieldArea[0]))))!)
-        _data_type_code = DataTypeCode(Int(String(Character(UnicodeScalar(pachFieldArea[1]))))!)
+        let value0 = String(Character(UnicodeScalar(pachFieldArea[0])))
+        _data_struct_code = DataStructCode(Int(value0)!)
+        let value1 = String(Character(UnicodeScalar(pachFieldArea[1])))
+        _data_type_code = DataTypeCode(Int(value1)!)
 
         #if DEBUG
             print("DDFFieldDefinition.initialize(\(pszTagIn)):\n\t\t data_struct_code = \(_data_struct_code)\n\t\t data_type_code = \(_data_type_code)\n\t\t iFDOffset = \(iFDOffset)")

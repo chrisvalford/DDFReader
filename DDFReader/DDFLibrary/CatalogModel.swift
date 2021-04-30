@@ -47,13 +47,23 @@ public class CatalogModel: ObservableObject {
         self.url = url
         do {
             handle = try FileHandle.init(forReadingFrom: url)
-            leaderData = handle!.readData(ofLength: 24)
+            leaderData = handle!.readData(ofLength: DDF_LEADER_SIZE)
+            //leaderData = handle!.readData(ofLength: 4096)
         } catch {
             print(error.localizedDescription)
         }
+//        let content = String(bytes: leaderData, encoding: .utf8)
+//        let breaks1E = content?.components(separatedBy: "\u{001E}")
+//        for item in breaks1E! {
+//            let printable = item.replacingOccurrences(of: "\u{001F}", with: "#")
+//            print(printable)
+//        }
+//    }
+
+
         // Read the 24 byte leader.
         var achLeader = [byte] () //byte[DDF_LEADER_SIZE];
-        
+
         if leaderData.count != DDF_LEADER_SIZE {
             #if DEBUG
             print("Catalog: Leader is short on DDF file \(url.lastPathComponent)")
@@ -61,28 +71,30 @@ public class CatalogModel: ObservableObject {
             destroy()
             return
         }
-        
+        achLeader = Array(leaderData)
+
         // Verify that this appears to be a valid DDF file.
         var bValid = true
-        
+
         for i in 0..<DDF_LEADER_SIZE {
+            //FIXME: Out of range here
             if achLeader[i] < 32 || achLeader[i] > 126 {
                 bValid = false
             }
         }
-        
+
         if achLeader[5] != "1".utf8.first && achLeader[5] != "2".utf8.first && achLeader[5] != "3".utf8.first {
             bValid = false
         }
-        
+
         if achLeader[6] != "L".utf8.first {
             bValid = false
         }
-        
+
         if achLeader[8] != "1".utf8.first && achLeader[8] != " ".utf8.first {
             bValid = false
         }
-        
+
         // Extract information from leader.
         if bValid {
             _recLength = Int(DDFUtils.string(from: achLeader, start: 0, length: 5)!)!
@@ -97,37 +109,40 @@ public class CatalogModel: ObservableObject {
             _sizeFieldLength = Int(DDFUtils.string(from: achLeader, start: 20, length: 1)!)!
             _sizeFieldPos = Int(DDFUtils.string(from: achLeader, start: 21, length: 1)!)!
             _sizeFieldTag = Int(DDFUtils.string(from: achLeader, start: 23, length: 1)!)!
-            
+
             if (_recLength! < 12 || _fieldControlLength == 0 || _fieldAreaStart! < 24 || _sizeFieldLength == 0 || _sizeFieldPos == 0 || _sizeFieldTag == 0) {
                 bValid = false
             }
-            
+
             #if DEBUG
             print("bValid = \(bValid), from \(achLeader)")
             print(toString());
             #endif
         }
-        
+
         // If the header is invalid, then clean up, report the error
         // and return.
         if (!bValid) {
             destroy();
-            
+
             #if DEBUG
             print("CatalogModel: File \(url.lastPathComponent) does not appear to have a valid ISO 8211 header.")
             #endif
             return
         }
-        
+
         #if DEBUG
         print("CatalogModel:  header parsed successfully");
         #endif
-        
+
         /* -------------------------------------------------------------------- */
         /* Read the whole record into memory. */
         /* -------------------------------------------------------------------- */
+        let data = handle!.readData(ofLength: _recLength!)
+        achLeader = Array(data)
+
         var pachRecord = [byte]() // byte[_recLength];
-        
+
         DDFUtils.arraycopy(source: achLeader,
                            sourceStart: 0,
                            destination: &pachRecord,
@@ -138,64 +153,72 @@ public class CatalogModel: ObservableObject {
             #if DEBUG
             print("CatalogModel: Header record is short on DDF file \(url.lastPathComponent)");
             #endif
-            
+
             return
         }
-        
+
         /* First make a pass counting the directory entries. */
         let nFieldEntryWidth = _sizeFieldLength! + _sizeFieldPos! + _sizeFieldTag!
-        
+
         var nFieldDefnCount = 0;
         //for (i = DDF_LEADER_SIZE; i < _recLength; i += nFieldEntryWidth) {
         for i in stride(from: DDF_LEADER_SIZE, to: _recLength!, by: nFieldEntryWidth) {
-            if pachRecord[i] == DDF_FIELD_TERMINATOR.utf8.first {
+            if pachRecord[i] == DDF_FIELD_TERMINATOR.utf8.first { // Index out of range
                 break
             }
-            
+
             nFieldDefnCount += 1
         }
-        
+
         /* Allocate, and read field definitions. */
         paoFieldDefns = [DDFFieldDefinition]()
-        
+
         for i in 0..<nFieldDefnCount {
             #if DEBUG
             print("CatalogModel.open: Reading field \(i)")
             #endif
-            
+
             var szTag = [byte]() // byte[128];
-            var nEntryOffset = DDF_LEADER_SIZE + i * nFieldEntryWidth
-            var nFieldLength: Int
-            var nFieldPos: Int
-            
+            var nEntryOffset =  (i * nFieldEntryWidth) //FIXME: DDF_LEADER_SIZE +
+            var nFieldLength: Int = 0
+            var nFieldPos: Int = 0
+
             DDFUtils.arraycopy(source: pachRecord,
                                sourceStart: nEntryOffset,
                                destination: &szTag,
                                destinationStart: 0,
                                count: _sizeFieldTag!)
-            
-            nEntryOffset += _sizeFieldTag!;
-            nFieldLength = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldLength!)!)!
-            
+
+            nEntryOffset += _sizeFieldTag!
+            if let value = DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldLength!) {
+            nFieldLength = Int(value)!
+            } else {
+                print("Invalid field length")
+            }
+
             nEntryOffset += _sizeFieldLength!
-            nFieldPos = Int(DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldPos!)!)!
-            
+            if let value = DDFUtils.string(from: pachRecord, start: nEntryOffset, length: _sizeFieldPos!) {
+                nFieldPos = Int(value)!
+            } else {
+                print("Invalid field position")
+            }
+
             var subPachRecord = [byte]() // byte[nFieldLength];
             DDFUtils.arraycopy(source: pachRecord,
                                sourceStart: _fieldAreaStart! + nFieldPos,
                                destination: &subPachRecord,
                                destinationStart: 0,
                                count: nFieldLength)
-            
+
             paoFieldDefns.append(DDFFieldDefinition(poModuleIn: self,
                                                     pszTagIn: DDFUtils.string(from: szTag, start: 0, length: _sizeFieldTag!)!,
                                                     pachFieldArea: subPachRecord))
         }
-        
+
         // Free the memory...
         achLeader.removeAll()
         pachRecord.removeAll()
-        
+
         // Record the current file offset, the beginning of the first
         // data record.
         do {
@@ -204,10 +227,10 @@ public class CatalogModel: ObservableObject {
             print("File offset is not available!")
         }
     }
-    
+
     /// Close an ISO 8211 file. Just close the file pointer to the file.
     public func close() {
-        
+
         if (handle != nil) {
             do {
                 try handle?.close()
@@ -217,19 +240,19 @@ public class CatalogModel: ObservableObject {
             handle = nil
         }
     }
-    
+
     /**
      * Clean up, get rid of data and close file pointer.
      */
     public func destroy() {
         close()
-        
+
         // Cleanup the working record.
         poRecord = nil
         // Cleanup the field definitions.
         paoFieldDefns.removeAll()
     }
-    
+
     /**
      * Write out module info to debugging file.
      *
@@ -253,7 +276,7 @@ public class CatalogModel: ObservableObject {
         buf.append("    _sizeFieldTag = \(_sizeFieldTag!)\n")
         return buf
     }
-    
+
     public func dump() -> String {
         var buf = ""
         var iRecord = 0;
@@ -272,8 +295,8 @@ public class CatalogModel: ObservableObject {
         } while poRecord != nil
         return buf
     }
-    
-    
+
+
     /// Fetch the definition of the named field.
     ///
     /// - Parameter fieldName: The name of the field to search for. The
@@ -295,7 +318,7 @@ public class CatalogModel: ObservableObject {
         }
         return nil
     }
-    
+
     /**
      * Read one record from the file, and return to the application.
      * The returned record is owned by the module, and is reused from
@@ -313,14 +336,14 @@ public class CatalogModel: ObservableObject {
         if (poRecord == nil) {
             poRecord = DDFRecord(poModuleIn: self)
         }
-        
+
         if poRecord?.read() == true {
             return poRecord
         } else {
             return nil
         }
     }
-    
+
     /**
      * Method for other components to call to get the CatalogModel to
      * read bytes into the provided array.
@@ -335,16 +358,17 @@ public class CatalogModel: ObservableObject {
         if (handle == nil) {
             reopen();
         }
-        
+
         if (handle != nil) {
             do {
                 let currentOffset = try handle?.offset()
                 if offset != 0 {
                     try handle!.seek(toOffset: currentOffset! + UInt64(offset))
                 }
-                let data = try handle!.read(upToCount: length)
-                toData = Array(data!)
-                return toData.count
+                if let data = try handle!.read(upToCount: length) {
+                    toData = Array(data)
+                    return toData.count
+                }
             } catch {
                 print("CatalogModel.read(): \(error.localizedDescription) reading from \(offset) to \(length) ")
                 //into \(toData == nil ? "nil [byte]" : "byte[\(toData.count)]")
@@ -352,7 +376,7 @@ public class CatalogModel: ObservableObject {
         }
         return 0
     }
-    
+
     /**
      * Convenience method to read a byte from the data file. Assumes
      * that you know what you are doing based on the parameters read
@@ -363,7 +387,7 @@ public class CatalogModel: ObservableObject {
         if (handle == nil) {
             reopen();
         }
-        
+
         if (handle != nil) {
             do {
                 let value = try handle!.read(upToCount: 1)
@@ -375,7 +399,7 @@ public class CatalogModel: ObservableObject {
         }
         return 0;
     }
-    
+
     /**
      * Convenience method to seek to a location in the data file.
      * Assumes that you know what you are doing based on the
@@ -388,7 +412,7 @@ public class CatalogModel: ObservableObject {
         if (handle == nil) {
             reopen()
         }
-        
+
         if (handle != nil) {
             do {
                 try handle?.seek(toOffset: pos)
@@ -399,7 +423,7 @@ public class CatalogModel: ObservableObject {
             print("Catalog doesn't have a pointer to a file")
         }
     }
-    
+
     /**
      * Fetch a field definition by index.
      *
@@ -413,7 +437,7 @@ public class CatalogModel: ObservableObject {
         }
         return nil
     }
-    
+
     /**
      * Return to first record.
      *
@@ -438,9 +462,9 @@ public class CatalogModel: ObservableObject {
             }
         }
     }
-    
+
     public func rewindToFirst() throws {
-        
+
         if (handle != nil) {
             do {
                 try handle?.seek(toOffset: nFirstRecordOffset)
@@ -448,9 +472,9 @@ public class CatalogModel: ObservableObject {
                 print("Error rewinding file: \(error.localizedDescription)")
             }
         }
-        
+
     }
-    
+
     public func reopen() {
         do {
             if (handle == nil) {

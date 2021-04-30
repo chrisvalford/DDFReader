@@ -35,7 +35,7 @@ public class DDFSubfield {
     /**
      * The number of bytes the field took up in the data file.
      */
-    var byteSize: Int
+    var byteSize: Int = 0
 
     init() {}
 
@@ -61,15 +61,15 @@ public class DDFSubfield {
         if (ddfdt == DDFDataType.DDFInt) {
             value = definition!.extractIntData(pachSourceData: pachFieldData,
                                              nMaxBytes: nBytesRemaining,
-                                             pnConsumedBytes: &nBytesConsumed)
+                                             pnConsumedBytes: &nBytesConsumed) as AnyObject
         } else if (ddfdt == DDFDataType.DDFFloat) {
             value = definition!.extractFloatData(pachSourceData: pachFieldData,
                                            nMaxBytes: nBytesRemaining,
-                                           pnConsumedBytes: &nBytesConsumed)
+                                           pnConsumedBytes: &nBytesConsumed) as AnyObject
         } else if (ddfdt == DDFDataType.DDFString || ddfdt == DDFDataType.DDFBinaryString) {
             value = definition!.extractStringData(pachSourceData: pachFieldData,
                                             nMaxBytes: nBytesRemaining,
-                                            pnConsumedBytes: &nBytesConsumed)
+                                            pnConsumedBytes: &nBytesConsumed) as AnyObject
         }
 
         byteSize = nBytesConsumed!

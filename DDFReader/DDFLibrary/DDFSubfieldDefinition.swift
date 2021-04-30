@@ -18,7 +18,7 @@ import Foundation
  */
 public class DDFSubfieldDefinition {
     
-    var name: String {
+    var name: String = "" {
         didSet { name = name.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
@@ -54,11 +54,11 @@ public class DDFSubfieldDefinition {
     }
     
     public init() {
-        bIsVariable = true;
-        nFormatWidth = 0;
-        chFormatDelimeter = DDF_UNIT_TERMINATOR;
-        eBinaryFormat = DDFBinaryFormat.NotBinary;
-        dataType = DDFDataType.DDFString;
+        bIsVariable = true
+        nFormatWidth = 0
+        chFormatDelimeter = DDF_UNIT_TERMINATOR
+        eBinaryFormat = DDFBinaryFormat.NotBinary
+        dataType = DDFDataType.DDFString
         pszFormatString = ""
     }
     
@@ -384,7 +384,7 @@ public class DDFSubfieldDefinition {
             // Interpret the bytes of data.
             switch (eBinaryFormat) {
             case DDFBinaryFormat.UInt, DDFBinaryFormat.SInt, DDFBinaryFormat.FloatReal:
-                return pszFormatString.char(at: 0) == "B" ? MoreMath.BuildIntegerBE(abyData) : MoreMath.BuildIntegerLE(abyData);
+                return Double(pszFormatString.char(at: 0) == "B" ? DDFUtils.BuildIntegerBE(bytevec: abyData) : DDFUtils.BuildIntegerLE(bytevec: abyData))
                 
             // if (nFormatWidth == 1)
             // return(abyData[0]);
@@ -419,7 +419,7 @@ public class DDFSubfieldDefinition {
             case DDFBinaryFormat.NotBinary, DDFBinaryFormat.FPReal, DDFBinaryFormat.FloatComplex:
                 return 0.0
             }
-            break;
+            //break;
         // end of 'b'/'B' case.
         
         default:
@@ -492,7 +492,7 @@ public class DDFSubfieldDefinition {
             // Interpret the bytes of data.
             switch (eBinaryFormat) {
             case DDFBinaryFormat.UInt, DDFBinaryFormat.SInt, DDFBinaryFormat.FloatReal:
-                return pszFormatString.char(at: 0) == "B" ? MoreMath.BuildIntegerBE(abyData) : MoreMath.BuildIntegerLE(abyData)
+                return pszFormatString.char(at: 0) == "B" ? DDFUtils.BuildIntegerBE(bytevec: abyData) : DDFUtils.BuildIntegerLE(bytevec: abyData)
                 
             // case DDFBinaryFormat.UInt:
             // if (nFormatWidth == 4)
@@ -531,14 +531,14 @@ public class DDFSubfieldDefinition {
             case DDFBinaryFormat.NotBinary, DDFBinaryFormat.FPReal, DDFBinaryFormat.FloatComplex:
                 return 0
             }
-            break
+            //break
         // end of 'b'/'B' case.
         
         default:
             return 0
         }
         
-        return 0
+        //return 0
     }
     
     /**
@@ -550,30 +550,33 @@ public class DDFSubfieldDefinition {
      *            Maximum number of bytes available in pachData.
      */
     public func dumpData(pachData: [byte], nMaxBytes: Int) -> String {
+        var fakeConsumedBytes: Int?
         var sb = ""
         if (dataType == DDFDataType.DDFFloat) {
             sb.append("      Subfield ")
             sb.append(name)
             sb.append("=")
-            sb.append(extractFloatData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
+            let value = extractFloatData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: &fakeConsumedBytes)
+            sb.append("\(value)")
             sb.append("\n");
         } else if (dataType == DDFDataType.DDFInt) {
             sb.append("      Subfield ")
             sb.append(name)
             sb.append("=")
-            sb.append(extractIntData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
+            let value = extractIntData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: &fakeConsumedBytes)
+            sb.append("\(value)")
             sb.append("\n");
         } else if (dataType == DDFDataType.DDFBinaryString) {
             sb.append("      Subfield ")
             sb.append(name)
             sb.append("=")
-            sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
+            sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: &fakeConsumedBytes))
             sb.append("\n");
         } else {
             sb.append("      Subfield ")
             sb.append(name)
             sb.append("=")
-            sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: 0))
+            sb.append(extractStringData(pachSourceData: pachData, nMaxBytes: nMaxBytes, pnConsumedBytes: &fakeConsumedBytes))
             sb.append("\n");
         }
         return sb
